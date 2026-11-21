@@ -84,6 +84,34 @@ def _clean_caption(text: str | None) -> str:
     return text
 
 
+# Instagram-фразы, которые в Telegram заменяем на понятные для канала
+REPLACE = [
+    (r"direct(?:dan|ga|da)?\s*(murojaat|yozing|yozib)", r"bot orqali \1"),
+    (r"sahifamga obuna bo['’ʻ]ling", "kanalimizga obuna bo'ling"),
+    (r"profilimga obuna bo['’ʻ]ling", "kanalimizga obuna bo'ling"),
+    (r"(?i)link (?:in|в) bio|ссылка в (?:шапке|профиле)", "havola pastda 👇"),
+    (r"(?i)пишите в директ|напишите в директ", "пишите в бот 👇"),
+]
+
+CAPTIONS_PATH = os.path.join(os.path.dirname(__file__), "content", "ig_captions.json")
+
+
+def _caption_for(m: dict) -> str:
+    """Описание как в Instagram; для роликов без подписи — текст редактора из ig_captions.json."""
+    import json
+    code = re.search(r"/(?:reel|p|tv)/([^/]+)/", m.get("permalink", ""))
+    try:
+        overrides = json.load(open(CAPTIONS_PATH, encoding="utf-8"))
+    except FileNotFoundError:
+        overrides = {}
+    if code and code.group(1) in overrides:
+        return overrides[code.group(1)]
+    text = _clean_caption(m.get("caption"))
+    for pat, rep in REPLACE:
+        text = re.sub(pat, rep, text)
+    return text
+
+
 def _escape(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
@@ -111,7 +139,7 @@ async def post_next(bot: Bot, preview_chat: int | None = None) -> None:
             logging.info("Новых видео для переноса нет")
             return
         m = queue[0]
-        caption = _escape(_clean_caption(m.get("caption")))
+        caption = _escape(_caption_for(m))
         footer = "\n\n📲 Savollar va arizalar — bot orqali 👇"
         caption = (caption[: 1024 - len(footer) - 3] + "…" if len(caption) + len(footer) > 1024 else caption) + footer
         kb = InlineKeyboardMarkup(inline_keyboard=[[
