@@ -1,0 +1,156 @@
+[
+  {
+    "id": "2026-11-22-dtp",
+    "at": "2026-11-22 10:00",
+    "approval": true,
+    "text": "🚗 <b>YTH bo'ldi. Birinchi 10 daqiqada nima qilish kerak?</b>\n\nKo'pchilik aynan shu daqiqalarda xato qiladi — va keyin sug'urta to'lovi kamayadi yoki umuman berilmaydi.\n\n✅ Avariya chirog'i va belgini qo'ying\n✅ Hammasini suratga oling: umumiy ko'rinish, shikastlar, raqamlar\n✅ Ikkinchi haydovchining polis ma'lumotlarini oling\n❌ Rozi bo'lmagan hujjatga imzo chekmang\n\n📋 To'liq chek-listni botdan bepul oling 👇\n\n— — —\n\n🚗 <b>Случилось ДТП. Что делать в первые 10 минут?</b>\n\nИменно в эти минуты чаще всего совершают ошибки — а потом выплату урезают или отказывают.\n\n✅ Аварийка и знак аварийной остановки\n✅ Сфотографируйте всё: общий план, повреждения, номера\n✅ Возьмите данные полиса второго водителя\n❌ Не подписывайте то, с чем не согласны\n\n📋 Полный чек-лист — бесплатно в боте 👇",
+    "buttons": [
+      [
+        [
+          "📋 Chek-list / Чек-лист",
+          "https://t.me/polislupa_bot?start=tg"
+        ]
+      ]
+    ],
+    "photo": "img/2026-11-22-dtp.png"
+  },
+  {
+    "id": "2026-11-22-poll",
+    "at": "2026-11-22 18:00",
+    "approval": true,
+    "poll": {
+      "question": "OSAGO'dan tashqari qanday sug'urtangiz bor? / Какая у вас есть страховка, кроме ОСАГО?",
+      "options": [
+        "KASKO / КАСКО",
+        "Uy-joy / Квартира или дом",
+        "Tibbiy / Медицинская",
+        "Hayot / Жизнь",
+        "Hech qanday / Никакой"
+      ],
+      "multiple": true
+    }
+  },
+  {
+    "id": "2026-11-23-flat",
+    "at": "2026-11-23 10:00",
+    "approval": true,
+    "text": "🏠 <b>Qo'shnilarni suv bosdingizmi? Ta'mirni kim to'laydi?</b>\n\nQuvur yorilishi bir kechada nafaqat sizning, balki pastdagi qo'shnilaringizning ta'mirini ham buzishi mumkin. Odatda hammasini o'z cho'ntagidan to'lashga to'g'ri keladi.\n\nKvartira sug'urtasi nimadan himoya qiladi:\n• suv bosishi va yong'in\n• ta'mir va texnikaning shikastlanishi\n• qo'shnilar oldidagi javobgarlik\n\nNarxi odatda kutganingizdan ancha arzon. Kvartirangiz uchun hisoblab beramiz 👇\n\n— — —\n\n🏠 <b>Затопили соседей. Кто платит за ремонт?</b>\n\nОдна лопнувшая труба за ночь может испортить ремонт не только вам, но и соседям снизу. Обычно всё это оплачивается из своего кармана.\n\nОт чего защищает страховка квартиры:\n• затопление и пожар\n• повреждение ремонта и техники\n• ответственность перед соседями\n\nСтоит она обычно заметно дешевле, чем кажется. Рассчитаем для вашей квартиры 👇",
+    "buttons": [
+      [
+        [
+          "🏠 Hisoblash / Рассчитать",
+          "https://t.me/polislupa_bot?start=tg"
+        ]
+      ]
+    ],
+    "photo": "img/2026-11-23-flat.png"
+  },
+  {
+    "id": "2026-11-24-biz",
+    "at": "2026-11-24 10:00",
+    "approval": true,
+    "text": "🏢 <b>Biznes egalari ko'pincha sug'urta qilishni unutadigan 3 ta xavf</b>\n\n1️⃣ <b>Ombor va tovar</b> — yong'in yoki suv bosishi bir kunda oylik tushumni yo'q qilishi mumkin.\n2️⃣ <b>Xodimlar</b> — ishdagi baxtsiz hodisa kompaniya uchun katta xarajat. Xodimlar sug'urtasi ham himoya, ham ular uchun bonus.\n3️⃣ <b>Mijozlar oldidagi javobgarlik</b> — xizmat yoki mahsulot tufayli zarar yetkazilsa.\n\nKompaniyangiz uchun xavflarni bepul tahlil qilamiz 👇\n\n— — —\n\n🏢 <b>3 риска, которые бизнес чаще всего забывает застраховать</b>\n\n1️⃣ <b>Склад и товар</b> — пожар или затопление за один день могут уничтожить месячную выручку.\n2️⃣ <b>Сотрудники</b> — несчастный случай на работе обходится компании дорого. Страховка сотрудников — и защита, и бонус для команды.\n3️⃣ <b>Ответственность перед клиентами</b> — если ваша услуга или товар причинили ущерб.\n\nБесплатно разберём риски вашей компании 👇",
+    "buttons": [
+      [
+        [
+          "🏢 Biznes uchun / Для бизнеса",
+          "https://t.me/polislupa_bot?start=tg"
+        ]
+      ]
+    ],
+    "photo": "img/2026-11-24-biz.png"
+  },
+  {
+    "id": "2026-11-25-travel",
+    "at": "2026-11-25 10:00",
+    "approval": true,
+    "text": "✈️ <b>Viza uchun sug'urta: nimani bilish kerak</b>\n\nKo'plab davlatlar viza berishda tibbiy sug'urta polisini talab qiladi. Masalan, Shengen vizasi uchun kamida 30 000 yevrolik qoplama kerak.\n\nPolis tanlashda tekshiring:\n• qoplama summasi talabga mosmi\n• butun safar muddatini qoplaydimi\n• qaysi holatlar istisno qilingan (sport, surunkali kasalliklar)\n\nSafaringiz uchun to'g'ri polisni tanlab beramiz 👇\n\n— — —\n\n✈️ <b>Страховка для визы: что важно знать</b>\n\nМногие страны требуют медицинский полис для визы. Например, для шенгенской визы нужно покрытие не менее 30 000 евро.\n\nПри выборе проверьте:\n• соответствует ли сумма покрытия требованиям\n• покрывает ли полис всю поездку\n• что исключено (спорт, хронические заболевания)\n\nПодберём правильный полис для вашей поездки 👇",
+    "buttons": [
+      [
+        [
+          "✈️ Polis tanlash / Подобрать полис",
+          "https://t.me/polislupa_bot?start=tg"
+        ]
+      ]
+    ],
+    "photo": "img/2026-11-25-travel.png"
+  },
+  {
+    "id": "2026-11-26-health",
+    "at": "2026-11-26 10:00",
+    "approval": true,
+    "text": "❤️ <b>Tibbiy sug'urta: u nimani qoplaydi?</b>\n\nYaxshi tibbiy polis bu nafaqat kasalxona. Odatda unga kiradi:\n• shifokor qabuli va tahlillar\n• xususiy klinikalarda davolanish\n• shoshilinch yordam va statsionar\n• ba'zi dasturlarda — stomatologiya\n\nOila yoki xodimlar uchun dastur tanlashda nimalarga e'tibor berish kerakligini aytib beramiz 👇\n\n— — —\n\n❤️ <b>Медицинская страховка: что она покрывает?</b>\n\nХороший медицинский полис — это не только больница. Обычно в него входят:\n• приёмы врачей и анализы\n• лечение в частных клиниках\n• скорая помощь и стационар\n• в некоторых программах — стоматология\n\nРасскажем, на что смотреть при выборе программы для семьи или сотрудников 👇",
+    "buttons": [
+      [
+        [
+          "❤️ Maslahat / Консультация",
+          "https://t.me/polislupa_bot?start=tg"
+        ]
+      ]
+    ],
+    "photo": "img/2026-11-26-health.png"
+  },
+  {
+    "id": "2026-11-27-refusal",
+    "at": "2026-11-27 10:00",
+    "approval": true,
+    "text": "⚠️ <b>Sug'urta to'lovni rad etishining 5 ta keng tarqalgan sababi</b>\n\n1. Hodisa haqida o'z vaqtida xabar berilmagan\n2. Rasmiylashtirishda noto'g'ri ma'lumot ko'rsatilgan\n3. Holat shartnomada istisno sifatida yozilgan\n4. Rulda polisga kiritilmagan haydovchi bo'lgan\n5. Kerakli hujjatlar to'planmagan\n\nKo'p xatolarni polis sotib olishdan OLDIN ko'rish mumkin. Shartnomangizni bepul tekshirib beramiz 👇\n\n— — —\n\n⚠️ <b>5 частых причин отказа в страховой выплате</b>\n\n1. Не сообщили о случае вовремя\n2. При оформлении указали неверные данные\n3. Ситуация прописана в договоре как исключение\n4. За рулём был водитель, не вписанный в полис\n5. Не собрали нужные документы\n\nМногие ошибки видно ещё ДО покупки полиса. Бесплатно проверим ваш договор 👇",
+    "buttons": [
+      [
+        [
+          "🔍 Polisni tekshirish / Проверить полис",
+          "https://t.me/polislupa_bot?start=tg"
+        ]
+      ]
+    ],
+    "photo": "img/2026-11-27-refusal.png"
+  },
+  {
+    "id": "2026-11-28-accident",
+    "at": "2026-11-28 10:00",
+    "approval": true,
+    "text": "🛡 <b>Baxtsiz hodisalardan sug'urta: kimga kerak?</b>\n\nJarohat yoki uzoq davolanish nafaqat sog'liqqa, balki daromadga ham ta'sir qiladi. Bunday polis to'lovni bevosita sizga beradi — uni xohlagan narsangizga sarflaysiz.\n\nAyniqsa foydali:\n• faol sport bilan shug'ullanadiganlar uchun\n• bolalar uchun\n• haydovchilar va xavfli kasb egalari uchun\n\nSiz uchun variant hisoblab beramiz 👇\n\n— — —\n\n🛡 <b>Страхование от несчастного случая: кому нужно?</b>\n\nТравма или долгое лечение бьют не только по здоровью, но и по доходу. Такой полис выплачивает деньги вам напрямую — тратите их на что нужно.\n\nОсобенно полезно:\n• тем, кто активно занимается спортом\n• детям\n• водителям и людям рискованных профессий\n\nРассчитаем вариант для вас 👇",
+    "buttons": [
+      [
+        [
+          "🛡 Hisoblash / Рассчитать",
+          "https://t.me/polislupa_bot?start=tg"
+        ]
+      ]
+    ],
+    "photo": "img/2026-11-28-accident.png"
+  },
+  {
+    "id": "2026-11-29-poll",
+    "at": "2026-11-29 18:00",
+    "approval": true,
+    "poll": {
+      "question": "Hech qachon sug'urta to'lovini olganmisiz? / Получали ли вы когда-нибудь страховую выплату?",
+      "options": [
+        "Ha, muammosiz / Да, без проблем",
+        "Ha, lekin qiyin bo'ldi / Да, но было сложно",
+        "Rad etishdi / Отказали",
+        "Hali kerak bo'lmagan / Ещё не было случая"
+      ],
+      "multiple": false
+    }
+  },
+  {
+    "id": "2026-11-25-rebus-kasko-uz",
+    "at": "2026-11-25 19:00",
+    "approval": true,
+    "photo": "img/2026-11-25-rebus-kasko-uz.png",
+    "text": "🧩 <b>Rebus kuni!</b>\n\nRasmni diqqat bilan ko'ring va javobni quyidagi so'rovnomada tanlang 👇",
+    "poll": {
+      "question": "Qaysi sug'urta turi?",
+      "options": [
+        "OSAGO",
+        "KASKO",
+        "Polis",
+        "Franshiza"
+      ],
+      "correct": 1,
+      "explanation": "KASKA → KASKO: avtomobilingizni shikastlanish va o'g'irlikdan himoya qiladi"
+    }
+  }
+]
