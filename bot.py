@@ -100,6 +100,16 @@ def set_lang(user_id: int, lang: str) -> None:
         con.execute("UPDATE users SET lang=? WHERE user_id=?", (lang, user_id))
 
 
+# ---------- Онлайн-оформление ----------
+# Продукты, которые клиент оформляет и оплачивает сам по агентской ссылке (калькулятор gross.uz).
+# Чтобы подключить новый продукт: добавьте строку сюда и кнопку в texts.py.
+PRODUCT_LINKS = {
+    "osago": "https://gross.uz/agent/mirzo_ulugbek/osago",
+    "kasko": "https://gross.uz/agent/mirzo_ulugbek/kasko",
+    "travel": "https://gross.uz/agent/mirzo_ulugbek/travel",
+}
+
+
 # ---------- Клавиатуры ----------
 def kb_lang() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
@@ -111,10 +121,10 @@ def kb_lang() -> InlineKeyboardMarkup:
 
 def kb_menu(lang: str) -> InlineKeyboardMarkup:
     rows = [
-        [InlineKeyboardButton(text=t("btn_osago", lang), callback_data="p:osago"),
-         InlineKeyboardButton(text=t("btn_kasko", lang), callback_data="p:kasko")],
-        [InlineKeyboardButton(text=t("btn_travel", lang), callback_data="p:travel"),
-         InlineKeyboardButton(text=t("btn_property", lang), callback_data="p:property")],
+        [InlineKeyboardButton(text=t("btn_osago", lang), url=PRODUCT_LINKS["osago"])],
+        [InlineKeyboardButton(text=t("btn_kasko", lang), url=PRODUCT_LINKS["kasko"])],
+        [InlineKeyboardButton(text=t("btn_travel", lang), url=PRODUCT_LINKS["travel"])],
+        [InlineKeyboardButton(text=t("btn_property", lang), callback_data="p:property")],
         [InlineKeyboardButton(text=t("btn_health", lang), callback_data="p:health")],
         [InlineKeyboardButton(text=t("btn_business", lang), callback_data="p:business")],
         [InlineKeyboardButton(text=t("btn_other", lang), callback_data="p:other")],
@@ -489,7 +499,7 @@ async def send_reminders(bot: Bot) -> None:
                 con.execute("UPDATE leads SET reminded=1 WHERE id=?", (r["id"],))
             continue
         kb = InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text=t("btn_renew", lang), callback_data=f"renew:{r['id']}")]])
+            InlineKeyboardButton(text=t("btn_renew", lang), url=PRODUCT_LINKS["osago"])]])
         try:
             await bot.send_message(r["user_id"], t("renew_reminder", lang).format(date=end.strftime("%d.%m.%Y")), reply_markup=kb)
         except Exception as e:
