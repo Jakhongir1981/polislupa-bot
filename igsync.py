@@ -287,6 +287,10 @@ async def publish_slot(bot: Bot) -> None:
         con.execute("INSERT OR IGNORE INTO ig_posted(media_id, permalink, message_id, posted_at) VALUES (?,?,?,?)",
                     (m["id"], m["permalink"], msg.message_id, now.isoformat()))
     _qset(m["id"], status="published")
+    from drive import log_row
+    await log_row("Публикации", ["Дата", "Источник", "Файл", "Подпись", "Сообщение в канале"],
+                  [now.strftime("%d.%m.%Y %H:%M"), "Instagram", m["permalink"], caption[:300],
+                   f"https://t.me/jakhongir_bakiev/{msg.message_id}"])
 
 
 @router.callback_query(F.data.startswith("igv:"))

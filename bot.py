@@ -28,6 +28,7 @@ from aiogram.types import (
 )
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+import drive
 import igsync
 import publisher
 from texts import PRODUCT_NAMES, SOURCE_NAMES, t
@@ -428,6 +429,11 @@ async def finish_lead(m: Message, state: FSMContext, lang: str, phone: str) -> N
         )
         lead_id = cur.lastrowid
     await notify_admin(m.bot, lead_id, m.from_user, product, details, phone, source, lang, data.get("files", []))
+    u = m.from_user
+    await drive.log_row("Заявки", ["№", "Дата", "Продукт", "Клиент", "Telegram", "Телефон", "Источник", "Язык", "Детали"],
+                        [lead_id, datetime.now(TZ).strftime("%d.%m.%Y %H:%M"), PRODUCT_NAMES.get(product, product),
+                         u.full_name, f"@{u.username}" if u.username else u.id, phone,
+                         SOURCE_NAMES.get(source, source), lang, details])
     await state.clear()
     await m.answer(t("thanks", lang), reply_markup=ReplyKeyboardRemove())
     await m.answer("👇", reply_markup=kb_menu(lang))
@@ -570,14 +576,17 @@ async def main() -> None:
     dp = Dispatcher()
     dp.include_router(publisher.router)
     dp.include_router(igsync.router)
+    dp.include_router(drive.router)
     dp.include_router(router)
     publisher.setup(db, ADMIN_CHAT_ID, CHANNEL_ID, TZ)
     igsync.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
+    drive.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
     if os.environ.get("RESTORE_REJECTED") == "1":
         logging.info("Восстановлено отклонённых постов: %s", publisher.restore_rejected())
     scheduler = AsyncIOScheduler(timezone=TZ)
     scheduler.add_job(send_reminders, "cron", hour=10, minute=0, args=[bot])
     scheduler.add_job(publisher.tick, "interval", minutes=1, args=[bot])
+    scheduler.add_job(drive.check_inbox, "interval", minutes=10, args=[bot])  # материалы с Google Диска
     scheduler.add_job(igsync.prepare_day, "cron", hour=9, minute=0, args=[bot])  # видео на одобрение
     for hour in (13, 20):  # два видео из Instagram в день, только одобренные
         scheduler.add_job(igsync.publish_slot, "cron", hour=hour, minute=0, args=[bot])
