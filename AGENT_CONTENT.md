@@ -7,7 +7,7 @@
 ## Шаг 0. Опубликовать одобренные статьи блога (с прошлых запусков)
 1. `GET {BOT}/api/proposals/blog` с заголовком `X-Key: <ключ>` → список `items` (id, blog_posts, cover_url).
 2. Для каждого: склонировать `Jakhongir1981/polislupa-site`, положить статьи в `content/blog/<slug>.md`
-   (формат — `content/blog/README.md`; uz и ru с общим `group`; без `draft`), обложку (скачать `cover_url`,
+   (формат — `content/blog/README.md`; uz и ru с общим `group`; без `draft`; кнопка проверки договора — `[Shartnomani tekshirish](/tekshirish/#upload)`, главная страница сейчас ведёт на блог), обложку (скачать `cover_url`,
    сжать в JPG ≤300 КБ) в `public/blog/media/`, выполнить `node tools/build-blog.mjs`, закоммитить и запушить в `main`.
    Сайт опубликуется сам (GitHub Actions → Cloudflare Pages).
 3. `POST {BOT}/api/proposals/blog_done` с `{"id": ..., "links": ["https://polislupa.uz/blog/<slug>/", ...]}`.
