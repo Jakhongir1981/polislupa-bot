@@ -569,6 +569,7 @@ async def main() -> None:
     bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
     dp.include_router(publisher.router)
+    dp.include_router(igsync.router)
     dp.include_router(router)
     publisher.setup(db, ADMIN_CHAT_ID, CHANNEL_ID, TZ)
     igsync.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
@@ -577,13 +578,16 @@ async def main() -> None:
     scheduler = AsyncIOScheduler(timezone=TZ)
     scheduler.add_job(send_reminders, "cron", hour=10, minute=0, args=[bot])
     scheduler.add_job(publisher.tick, "interval", minutes=1, args=[bot])
-    for hour in (13, 20):  # два видео из Instagram в день
-        scheduler.add_job(igsync.post_next, "cron", hour=hour, minute=0, args=[bot])
+    scheduler.add_job(igsync.prepare_day, "cron", hour=9, minute=0, args=[bot])  # видео на одобрение
+    for hour in (13, 20):  # два видео из Instagram в день, только одобренные
+        scheduler.add_job(igsync.publish_slot, "cron", hour=hour, minute=0, args=[bot])
     scheduler.add_job(igsync.refresh_token, "cron", day_of_week="mon", hour=4, minute=0)
     scheduler.start()
+    if os.environ.get("IG_PREPARE_ON_START") == "1":
+        await igsync.prepare_day(bot)
     if os.environ.get("IG_TEST_ON_START") == "1":
         await bot.send_message(ADMIN_CHAT_ID, "👀 Тест: так будут выходить видео из Instagram в канале (это предпросмотр, в канал не отправлено).")
-        await igsync.post_next(bot, preview_chat=ADMIN_CHAT_ID)
+        await igsync.post_next_legacy(bot, preview_chat=ADMIN_CHAT_ID)
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
