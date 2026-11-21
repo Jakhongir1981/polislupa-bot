@@ -31,6 +31,9 @@ def setup(db_func, channel_id, admin_id: int, tz) -> None:
     with db_func() as con:
         con.execute("CREATE TABLE IF NOT EXISTS drive_items (file_id TEXT PRIMARY KEY, name TEXT, status TEXT, "
                     "tg_file TEXT, kind TEXT, caption TEXT, updated_at TEXT)")
+        cols = {r[1] for r in con.execute("PRAGMA table_info(drive_items)")}
+        if "ig_url" not in cols:
+            con.execute("ALTER TABLE drive_items ADD COLUMN ig_url TEXT")
 
 
 async def _get(params: dict) -> dict:
@@ -111,14 +114,19 @@ async def check_inbox(bot: Bot) -> None:
             else:
                 msg = await bot.send_photo(_cfg["admin"], inp, caption=caption or None, reply_markup=_channel_kb())
                 tg_file = msg.photo[-1].file_id
-            akb = InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text="✅ Опубликовать", callback_data=f"drv:ok:{f['id']}"),
-                InlineKeyboardButton(text="❌ Не публиковать", callback_data=f"drv:no:{f['id']}"),
-            ]])
+            import igpublish
+            ig_url = igpublish.save_upload(f"{f['id']}_{f['name']}", data) if igpublish.enabled() else None
+            rows = []
+            if ig_url:
+                rows.append([InlineKeyboardButton(text="✅ Telegram + Instagram", callback_data=f"drv:okig:{f['id']}")])
+            rows.append([InlineKeyboardButton(text="✅ Только Telegram" if ig_url else "✅ Опубликовать",
+                                              callback_data=f"drv:ok:{f['id']}"),
+                         InlineKeyboardButton(text="❌ Не публиковать", callback_data=f"drv:no:{f['id']}")])
+            akb = InlineKeyboardMarkup(inline_keyboard=rows)
             await bot.send_message(_cfg["admin"], "☝️ Публикуем в канал?" + ("" if caption else
                                    "\n(Подписи нет — можно добавить .txt с тем же именем файла на Диск.)"),
                                    reply_markup=akb)
-            _save(f["id"], name=f["name"], status="pending", tg_file=tg_file, kind=kind, caption=caption)
+            _save(f["id"], name=f["name"], status="pending", tg_file=tg_file, kind=kind, caption=caption, ig_url=ig_url)
         except Exception as e:
             logging.error("Не удалось подготовить %s: %s", f["name"], e)
 
@@ -133,7 +141,7 @@ async def cb_drive(c: CallbackQuery) -> None:
     if not row or row["status"] != "pending":
         await c.answer("Уже обработано")
         return
-    if action == "ok":
+    if action in ("ok", "okig"):
         send = c.bot.send_video if row["kind"] == "video" else c.bot.send_photo
         msg = await send(_cfg["channel"], row["tg_file"], caption=row["caption"] or None, reply_markup=_channel_kb())
         _save(fid, status="published")
@@ -144,7 +152,16 @@ async def cb_drive(c: CallbackQuery) -> None:
         await log_row("Публикации", ["Дата", "Источник", "Файл", "Подпись", "Сообщение в канале"],
                       [datetime.now(_cfg["tz"]).strftime("%d.%m.%Y %H:%M"), "Google Диск", row["name"],
                        row["caption"] or "", f"https://t.me/jakhongir_bakiev/{msg.message_id}"])
-        await c.message.edit_text("✅ Опубликовано в канале. Файл перенесён в «✅ Опубликовано».")
+        await c.message.edit_text("✅ Опубликовано в Telegram. Файл перенесён в «✅ Опубликовано»."
+                                  + ("\n⏳ Отправляю в Instagram…" if action == "okig" else ""))
+        if action == "okig" and row["ig_url"]:
+            import igpublish
+            try:
+                link = await igpublish.publish(row["ig_url"], igpublish.ig_caption(row["caption"] or ""), row["kind"])
+                await c.bot.send_message(_cfg["admin"], f"📷 Вышло и в Instagram: {link}")
+            except Exception as e:
+                logging.error("Instagram: %s", e)
+                await c.bot.send_message(_cfg["admin"], f"⚠️ В Telegram вышло, а в Instagram — нет: {e}")
     else:
         _save(fid, status="rejected")
         await c.message.edit_text("❌ Не публикуем. Файл остаётся на Диске, повторно предлагать не буду.")

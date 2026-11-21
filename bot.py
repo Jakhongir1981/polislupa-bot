@@ -29,7 +29,9 @@ from aiogram.types import (
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import drive
+import igpublish
 import igsync
+import proposals
 import publisher
 from texts import PRODUCT_NAMES, SOURCE_NAMES, t
 
@@ -577,10 +579,12 @@ async def main() -> None:
     dp.include_router(publisher.router)
     dp.include_router(igsync.router)
     dp.include_router(drive.router)
+    dp.include_router(proposals.router)
     dp.include_router(router)
     publisher.setup(db, ADMIN_CHAT_ID, CHANNEL_ID, TZ)
     igsync.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
     drive.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
+    proposals.setup(db, bot, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
     if os.environ.get("RESTORE_REJECTED") == "1":
         logging.info("Восстановлено отклонённых постов: %s", publisher.restore_rejected())
     scheduler = AsyncIOScheduler(timezone=TZ)
@@ -597,6 +601,7 @@ async def main() -> None:
     if os.environ.get("IG_TEST_ON_START") == "1":
         await bot.send_message(ADMIN_CHAT_ID, "👀 Тест: так будут выходить видео из Instagram в канале (это предпросмотр, в канал не отправлено).")
         await igsync.post_next_legacy(bot, preview_chat=ADMIN_CHAT_ID)
+    await igpublish.start_web()
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 

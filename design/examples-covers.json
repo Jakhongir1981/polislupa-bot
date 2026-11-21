@@ -1,0 +1,9 @@
+[
+ {"id":"2026-11-22-dtp","theme":"auto","icon":"car-front","chip":"Avto · Авто","title":"YTH bo'ldi. Birinchi 10 daqiqada nima qilish kerak?","sub":"ДТП: что делать в первые 10 минут","fs":62},
+ {"id":"2026-11-23-flat","theme":"property","icon":"droplets","chip":"Mol-mulk · Имущество","title":"Qo'shnilarni suv bosdingizmi? Ta'mirni kim to'laydi?","sub":"Затопили соседей — кто платит за ремонт?","fs":62},
+ {"id":"2026-11-24-biz","theme":"biz","icon":"building-2","chip":"Biznes · Для бизнеса","title":"Biznes unutadigan 3 ta xavf","sub":"3 риска, которые бизнес забывает застраховать","fs":72},
+ {"id":"2026-11-25-travel","theme":"travel","icon":"plane","chip":"Sayohat · Путешествия","title":"Viza uchun sug'urta: nimani bilish kerak","sub":"Страховка для визы: что важно знать","fs":66},
+ {"id":"2026-11-26-health","theme":"health","icon":"heart-pulse","chip":"Sog'liq · Здоровье","title":"Tibbiy sug'urta nimani qoplaydi?","sub":"Что покрывает медицинская страховка","fs":70},
+ {"id":"2026-11-27-refusal","theme":"warn","icon":"triangle-alert","chip":"To'lovlar · Выплаты","title":"To'lov rad etilishining 5 sababi","sub":"5 частых причин отказа в выплате","fs":70},
+ {"id":"2026-11-28-accident","theme":"shield","icon":"shield-check","chip":"Hayot · Жизнь","title":"Baxtsiz hodisalardan sug'urta: kimga kerak?","sub":"Страхование от несчастного случая","fs":64}
+]

@@ -105,10 +105,15 @@ async def tick(bot: Bot) -> None:
         try:
             if st is None:
                 if post.get("approval"):
-                    kb = InlineKeyboardMarkup(inline_keyboard=[[
-                        InlineKeyboardButton(text="✅ Опубликовать", callback_data=f"pub:ok:{pid}"),
-                        InlineKeyboardButton(text="❌ Отклонить", callback_data=f"pub:no:{pid}"),
-                    ]])
+                    rows = []
+                    if post.get("photo"):
+                        rows.append([InlineKeyboardButton(text="✅ Telegram + Instagram", callback_data=f"pub:okig:{pid}")])
+                        rows.append([InlineKeyboardButton(text="✅ Только Telegram", callback_data=f"pub:ok:{pid}"),
+                                     InlineKeyboardButton(text="❌ Отклонить", callback_data=f"pub:no:{pid}")])
+                    else:
+                        rows.append([InlineKeyboardButton(text="✅ Опубликовать", callback_data=f"pub:ok:{pid}"),
+                                     InlineKeyboardButton(text="❌ Отклонить", callback_data=f"pub:no:{pid}")])
+                    kb = InlineKeyboardMarkup(inline_keyboard=rows)
                     await bot.send_message(
                         _cfg["admin"],
                         f"📝 <b>Пост на одобрение</b>\nПубликация: {at:%d.%m %H:%M}\n"
@@ -121,12 +126,26 @@ async def tick(bot: Bot) -> None:
                 else:
                     _set_status(pid, "approved")
                     st = "approved"
-            if st == "approved" and at <= now:
+            if st in ("approved", "approved_ig") and at <= now:
                 msg = await _send(bot, _cfg["channel"], post)
                 _set_status(pid, "published", msg.message_id)
                 logging.info("Опубликован пост %s", pid)
+                if st == "approved_ig" and post.get("photo"):
+                    await _to_instagram(bot, post)
         except Exception as e:
             logging.error("Ошибка с постом %s: %s", pid, e)
+
+
+async def _to_instagram(bot: Bot, post: dict) -> None:
+    import igpublish
+    extra = "🧩 Javobingizni izohlarda yozing 👇" if post.get("poll") else ""
+    try:
+        link = await igpublish.publish(igpublish.cover_url(post["photo"]),
+                                       igpublish.ig_caption(post.get("text", ""), extra))
+        await bot.send_message(_cfg["admin"], f"📷 Пост вышел и в Instagram: {link}")
+    except Exception as e:
+        logging.error("Instagram: %s", e)
+        await bot.send_message(_cfg["admin"], f"⚠️ В Telegram пост вышел, а в Instagram — нет: {e}")
 
 
 @router.callback_query(F.data.startswith("pub:"))
@@ -135,13 +154,16 @@ async def cb_publish(c: CallbackQuery) -> None:
         await c.answer()
         return
     _, action, pid = c.data.split(":", 2)
-    allowed = {"ok": "pending", "no": "pending", "re": "rejected"}[action]
+    allowed = {"ok": "pending", "okig": "pending", "no": "pending", "re": "rejected"}[action]
     if _status(pid) != allowed:
         await c.answer("Уже обработано")
         return
     if action == "ok":
         _set_status(pid, "approved")
-        await c.message.edit_text("✅ Одобрено — выйдет по расписанию.")
+        await c.message.edit_text("✅ Одобрено — выйдет в Telegram по расписанию.")
+    elif action == "okig":
+        _set_status(pid, "approved_ig")
+        await c.message.edit_text("✅ Одобрено — выйдет в Telegram и Instagram по расписанию.")
     elif action == "re":
         _set_status(pid, "approved")
         await c.message.edit_text("♻️ Пост восстановлен и одобрен — выйдет по расписанию.")
@@ -157,7 +179,7 @@ async def cb_publish(c: CallbackQuery) -> None:
 from aiogram.filters import Command
 from aiogram.types import Message
 
-ICONS = {"pending": "⏳ ждёт одобрения", "approved": "✅ одобрен", "rejected": "❌ отклонён", "published": "📢 опубликован"}
+ICONS = {"pending": "⏳ ждёт одобрения", "approved": "✅ одобрен (Telegram)", "approved_ig": "✅ одобрен (Telegram + Instagram)", "rejected": "❌ отклонён", "published": "📢 опубликован"}
 
 
 @router.message(Command("posts"))
