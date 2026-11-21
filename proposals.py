@@ -94,7 +94,9 @@ async def _send_to_owner(pid, data, raw) -> None:
          InlineKeyboardButton(text="✅ Везде", callback_data=f"prop:all:{pid}")],
         [InlineKeyboardButton(text="❌ Отклонить всё", callback_data=f"prop:no:{pid}")],
     ])
-    await bot.send_message(admin, "☝️ Что публикуем? Можно нажать несколько кнопок по очереди.", reply_markup=kb)
+    when = data.get("publish_at")
+    await bot.send_message(admin, ("🗓 Выйдет " + when[8:10] + "." + when[5:7] + " в " + when[11:] + " после одобрения.\n" if when else "")
+                           + "☝️ Что публикуем? Можно нажать несколько кнопок по очереди.", reply_markup=kb)
 
 
 async def _do_tg(bot, data) -> str:
@@ -133,15 +135,33 @@ async def cb_prop(c: CallbackQuery) -> None:
         await c.message.edit_text("❌ Предложение отклонено.")
         await c.answer()
         return
+    when = data.get("publish_at")
+    if when and datetime.strptime(when, "%Y-%m-%d %H:%M") > datetime.now(_cfg["tz"]).replace(tzinfo=None):
+        marks = []
+        if action in ("tg", "all") and row["tg"] in ("new", "scheduled"):
+            _set(pid, tg="scheduled"); marks.append("Telegram")
+        if action in ("ig", "all") and row["ig"] in ("new", "scheduled"):
+            _set(pid, ig="scheduled"); marks.append("Instagram")
+        if action in ("blog", "all") and row["blog"] == "new" and data.get("blog_title"):
+            _set(pid, blog="approved"); marks.append("блог")
+        await c.answer("Запланировано")
+        await bot.send_message(_cfg["admin"], f"🗓 <b>{data.get('topic', '')}</b>: выйдет {when[8:10]}.{when[5:7]} в {when[11:]} — "
+                                              + ", ".join(marks))
+        return
     await c.answer("Принято, публикую…")
-    if action in ("tg", "all") and row["tg"] == "new":
+    await _publish(bot, pid, data, action, row)
+
+
+async def _publish(bot, pid, data, action, row) -> None:
+    done = []
+    if action in ("tg", "all") and row["tg"] in ("new", "scheduled"):
         try:
             link = await _do_tg(bot, data)
             _set(pid, tg="published")
             done.append(f"📢 Telegram: {link}")
         except Exception as e:
             done.append(f"⚠️ Telegram: {e}")
-    if action in ("ig", "all") and row["ig"] == "new":
+    if action in ("ig", "all") and row["ig"] in ("new", "scheduled"):
         try:
             urls = data.get("slide_urls") or ([data["cover_url"]] if data.get("cover_url") else [])
             cap = igpublish.ig_caption(data.get("ig_caption") or data.get("tg_text") or "")
@@ -156,6 +176,19 @@ async def cb_prop(c: CallbackQuery) -> None:
     if done:
         await bot.send_message(_cfg["admin"], f"<b>{data.get('topic', '')}</b>\n" + "\n".join(done),
                                disable_web_page_preview=True)
+
+
+async def tick(bot: Bot) -> None:
+    """Публикует одобренные предложения, у которых наступило время publish_at."""
+    now = datetime.now(_cfg["tz"]).replace(tzinfo=None)
+    with _cfg["db"]() as con:
+        rows = con.execute("SELECT * FROM proposals WHERE tg='scheduled' OR ig='scheduled'").fetchall()
+    for row in rows:
+        data = json.loads(row["data"])
+        if datetime.strptime(data["publish_at"], "%Y-%m-%d %H:%M") > now:
+            continue
+        action = "all" if row["tg"] == "scheduled" and row["ig"] == "scheduled" else ("tg" if row["tg"] == "scheduled" else "ig")
+        await _publish(bot, row["id"], data, action, row)
 
 
 async def _blog_queue(request: web.Request) -> web.Response:

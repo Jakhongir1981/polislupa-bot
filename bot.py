@@ -590,6 +590,7 @@ async def main() -> None:
     scheduler = AsyncIOScheduler(timezone=TZ)
     scheduler.add_job(send_reminders, "cron", hour=10, minute=0, args=[bot])
     scheduler.add_job(publisher.tick, "interval", minutes=1, args=[bot])
+    scheduler.add_job(proposals.tick, "interval", minutes=1, args=[bot])
     scheduler.add_job(drive.check_inbox, "interval", minutes=10, args=[bot])  # материалы с Google Диска
     scheduler.add_job(igsync.prepare_day, "cron", hour=9, minute=0, args=[bot])  # видео на одобрение
     for hour in (13, 20):  # два видео из Instagram в день, только одобренные
