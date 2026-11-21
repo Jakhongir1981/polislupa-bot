@@ -108,6 +108,10 @@ async def _do_tg(bot, data) -> str:
                                        caption=text[:1024], reply_markup=kb)
     else:
         msg = await bot.send_message(_cfg["channel"], text, reply_markup=kb)
+    p = data.get("poll")
+    if p:  # викторина (ребус): правильный ответ и пояснение показывает Telegram
+        await bot.send_poll(_cfg["channel"], p["question"], p["options"], is_anonymous=True, type="quiz",
+                            correct_option_id=p["correct"], explanation=p.get("explanation"))
     return f"https://t.me/jakhongir_bakiev/{msg.message_id}"
 
 
