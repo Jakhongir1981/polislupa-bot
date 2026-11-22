@@ -271,8 +271,7 @@ async def _blog_queue(request: web.Request) -> web.Response:
     if not _auth(request):
         return web.json_response({"error": "forbidden"}, status=403)
     with _cfg["db"]() as con:
-        rows = con.execute("SELECT id, data FROM proposals WHERE blog IN ('approved','published') "
-                           "ORDER BY created_at DESC LIMIT 20").fetchall()  # сайт сам пропускает уже выложенные
+        rows = con.execute("SELECT id, data FROM proposals WHERE blog='approved'").fetchall()
     out = []
     for r in rows:
         d = json.loads(r["data"])
@@ -316,7 +315,8 @@ async def _reel_again(request: web.Request) -> web.Response:
 async def _blog_pending(request: web.Request) -> web.Response:
     """Одобренные статьи, которых ещё нет на сайте — их забирает GitHub Actions сайта."""
     with _cfg["db"]() as con:
-        rows = con.execute("SELECT id, data FROM proposals WHERE blog='approved'").fetchall()
+        rows = con.execute("SELECT id, data FROM proposals WHERE blog IN ('approved','published') "
+                           "ORDER BY created_at DESC LIMIT 20").fetchall()  # сайт сам пропускает уже выложенные
     out = [{"id": r["id"], "blog_posts": json.loads(r["data"]).get("blog_posts", []),
             "cover_url": json.loads(r["data"]).get("cover_url")} for r in rows]
     return web.json_response({"items": out})
