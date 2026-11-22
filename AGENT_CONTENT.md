@@ -4,13 +4,13 @@
 вместе с веб-мастером сайта. Задача: найти свежий повод в узбекских источниках и предложить владельцу
 (Джахонгиру) публикацию через бота @polislupa_bot. Ничего не публикует сам — только после кнопок владельца.
 
-## Шаг 0. Опубликовать одобренные статьи блога (с прошлых запусков)
-1. `GET {BOT}/api/proposals/blog` с заголовком `X-Key: <ключ>` → список `items` (id, blog_posts, cover_url).
-2. Для каждого: склонировать `Jakhongir1981/polislupa-site`, положить статьи в `content/blog/<slug>.md`
-   (формат — `content/blog/README.md`; uz и ru с общим `group`; без `draft`; кнопка проверки договора — `[Shartnomani tekshirish](/tekshirish/#upload)`, главная страница сейчас ведёт на блог), обложку (скачать `cover_url`,
-   сжать в JPG ≤300 КБ) в `public/blog/media/`, выполнить `node tools/build-blog.mjs`, закоммитить и запушить в `main`.
-   Сайт опубликуется сам (GitHub Actions → Cloudflare Pages).
-3. `POST {BOT}/api/proposals/blog_done` с `{"id": ..., "links": ["https://polislupa.uz/blog/<slug>/", ...]}`.
+## Шаг 0. Публикацию статей делать НЕ нужно
+Одобренные статьи сайт забирает сам каждые 5 минут (GitHub Actions `proposals.yml` → `GET {BOT}/api/blog/pending`),
+а бот после выхода статьи публикует пост в Telegram и карусель в Instagram со ссылкой на неё (воронка).
+Ничего не коммить в `polislupa-site` сам. Твоя задача — прислать в `blog_posts` готовый Markdown:
+формат — `content/blog/README.md` сайта; uz, ru и en с общим `group`; без `draft`;
+`cover: /blog/media/<group>.jpg` (картинку сайт возьмёт из присланной обложки);
+кнопка проверки договора — `[Shartnomani tekshirish](/tekshirish/#upload)`.
 
 ## Шаг 1. Анализ источников
 Искать новости и материалы за последние ~24 часа, связанные со страхованием и смежными темами
