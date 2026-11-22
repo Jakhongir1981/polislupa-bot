@@ -78,7 +78,7 @@ SITE = "https://polislupa.uz"
 BOT_LINK = "https://t.me/polislupa_bot?start=tg"
 
 
-def funnel_rows(ig_link=None, article=None, base_rows=None):
+def funnel_rows(ig_link=None, article=None, base_rows=None, fb_link=None):
     """Кнопки под постом в канале: всё ссылается друг на друга (статья ↔ Instagram ↔ сайт ↔ бот заявок)."""
     from aiogram.types import InlineKeyboardButton as B
     rows = [list(r) for r in (base_rows or [])]
@@ -88,6 +88,8 @@ def funnel_rows(ig_link=None, article=None, base_rows=None):
     mid = []
     if ig_link and ig_link not in have:
         mid.append(B(text="📷 Instagram", url=ig_link))
+    if fb_link and fb_link not in have:
+        mid.append(B(text="📘 Facebook", url=fb_link))
     if not article and not any(u and u.startswith(SITE) for u in have):
         mid.append(B(text="🌐 PolisLupa.uz", url=SITE + "/blog/"))
     if mid:
@@ -97,16 +99,16 @@ def funnel_rows(ig_link=None, article=None, base_rows=None):
     return rows
 
 
-def funnel_kb(ig_link=None, article=None, base_rows=None):
+def funnel_kb(ig_link=None, article=None, base_rows=None, fb_link=None):
     from aiogram.types import InlineKeyboardMarkup
-    return InlineKeyboardMarkup(inline_keyboard=funnel_rows(ig_link, article, base_rows))
+    return InlineKeyboardMarkup(inline_keyboard=funnel_rows(ig_link, article, base_rows, fb_link))
 
 
-async def add_ig_button(bot, chat_id, message_id, ig_link, article=None, base_rows=None) -> None:
+async def add_ig_button(bot, chat_id, message_id, ig_link, article=None, base_rows=None, fb_link=None) -> None:
     """После выхода в Instagram добавляет под постом в Telegram кнопку на него."""
     try:
         await bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id,
-                                            reply_markup=funnel_kb(ig_link, article, base_rows))
+                                            reply_markup=funnel_kb(ig_link, article, base_rows, fb_link))
     except Exception as e:
         log.warning("Не удалось добавить кнопку Instagram: %s", e)
 

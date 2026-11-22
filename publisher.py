@@ -42,10 +42,10 @@ def _load_queue() -> list[dict]:
         return []
 
 
-def _kb(post: dict, ig_link=None) -> InlineKeyboardMarkup | None:
+def _kb(post: dict, ig_link=None, fb_link=None) -> InlineKeyboardMarkup | None:
     import igpublish
     base = [[InlineKeyboardButton(text=b[0], url=b[1]) for b in row] for row in (post.get("buttons") or [])]
-    return igpublish.funnel_kb(ig_link, post.get("article"), base)  # воронка: сайт, бот, Instagram
+    return igpublish.funnel_kb(ig_link, post.get("article"), base, fb_link)  # воронка: сайт, бот, Instagram
 
 
 def _status(post_id: str) -> str | None:
@@ -142,7 +142,7 @@ async def _to_instagram(bot: Bot, post: dict, msg=None) -> None:
                                           igpublish.ig_caption(post.get("text", ""), extra), post["id"])
         if msg is not None and not post.get("poll"):
             await bot.edit_message_reply_markup(chat_id=_cfg["channel"], message_id=msg.message_id,
-                                                reply_markup=_kb(post, link))
+                                                reply_markup=_kb(post, link, reels.LAST_FB.get(post["id"])))
         await bot.send_message(_cfg["admin"], f"📷 Пост вышел и в Instagram: {link}")
     except Exception as e:
         logging.error("Instagram: %s", e)

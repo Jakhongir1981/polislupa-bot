@@ -161,7 +161,7 @@ async def cb_drive(c: CallbackQuery) -> None:
                 cap = igpublish.ig_caption(row["caption"] or "")
                 link = await (reels.publish_video(row["ig_url"], cap, fid) if row["kind"] == "video"
                               else reels.publish_images([row["ig_url"]], cap, fid))
-                await igpublish.add_ig_button(c.bot, _cfg["channel"], msg.message_id, link)
+                await igpublish.add_ig_button(c.bot, _cfg["channel"], msg.message_id, link, fb_link=reels.LAST_FB.get(fid))
                 await c.bot.send_message(_cfg["admin"], f"📷 Вышло и в Instagram: {link}")
             except Exception as e:
                 logging.error("Instagram: %s", e)

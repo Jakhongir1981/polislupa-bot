@@ -14,6 +14,7 @@ import tempfile
 import imageio_ffmpeg
 from PIL import Image, ImageDraw
 
+import facebook
 import igpublish
 
 W, H = 1080, 1920
@@ -23,6 +24,18 @@ MUSIC = os.path.join(os.path.dirname(__file__), "content", "audio", "news-bed.m4
 STORY_SEC = 7
 AUTO_STORY = False   # Instagram не даёт программе сделать сторис кликабельной — владелец делает её сам
 NOTIFY = None        # bot.py: отправка сообщения владельцу
+LAST_FB = {}         # name → ссылка на Reels в Facebook (для кнопки в Telegram)
+
+
+async def _to_facebook(video_url: str, caption: str, name: str) -> None:
+    if not facebook.enabled():
+        return
+    try:
+        LAST_FB[name] = await facebook.publish_reel(video_url, caption)
+    except Exception as e:
+        logging.warning("Facebook Reels: %s", e)
+        if NOTIFY:
+            await NOTIFY(f"⚠️ Facebook Reels не вышел: {e}")
 
 
 async def _story_hint(link: str) -> None:
@@ -142,6 +155,7 @@ async def publish_images(images: list[str], caption: str, name: str) -> str:
     """Картинка или слайды → Reels + сторис-анонс. Возвращает ссылку на Reels."""
     video_url, cover = await asyncio.to_thread(build_reel, images, name)
     link = await igpublish.publish(video_url, caption, "video", cover_url=cover)
+    await _to_facebook(video_url, caption, name)
     if AUTO_STORY:
         await story(images[0], name)
     else:
@@ -152,6 +166,7 @@ async def publish_images(images: list[str], caption: str, name: str) -> str:
 async def publish_video(video_url: str, caption: str, name: str) -> str:
     """Готовое видео → Reels + сторис-анонс с кадром из видео."""
     link = await igpublish.publish(video_url, caption, "video")
+    await _to_facebook(video_url, caption, name)
     if not AUTO_STORY:
         await _story_hint(link)
         return link

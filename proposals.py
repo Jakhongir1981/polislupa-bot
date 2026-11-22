@@ -12,6 +12,7 @@ import base64
 import json
 import logging
 import os
+import re
 import aiohttp
 from datetime import datetime
 
@@ -156,9 +157,9 @@ async def _is_live(url) -> bool:
         return False
 
 
-async def _do_tg(bot, data, article=None, ig_link=None) -> str:
+async def _do_tg(bot, data, article=None, ig_link=None, fb_link=None) -> str:
     text = data.get("tg_text") or ""
-    kb = igpublish.funnel_kb(ig_link, article)  # воронка: статья, Instagram, бот заявок
+    kb = igpublish.funnel_kb(ig_link, article, fb_link=fb_link)  # воронка: статья, Instagram, бот заявок
     if data.get("cover_url"):
         path = os.path.join(igpublish.UP_DIR, os.path.basename(data["cover_url"]))
         with open(path, "rb") as f:
@@ -229,7 +230,7 @@ async def _publish(bot, pid, data, action, row) -> None:
     article = _article_url(data) if row["blog"] in ("approved", "published") else None
     if article and row["blog"] == "approved" and not await _is_live(article):
         article = None  # статья ещё не вышла — ссылку не ставим
-    ig_link = None
+    ig_link = fb_link = None
     if action in ("ig", "all") and row["ig"] in ("new", "scheduled", "wait_blog"):
         try:
             urls = data.get("slide_urls") or ([data["cover_url"]] if data.get("cover_url") else [])
@@ -239,11 +240,24 @@ async def _publish(bot, pid, data, action, row) -> None:
             link = await reels.publish_images(urls, cap, pid)  # Reels из слайдов + сторис-анонс
             _set(pid, ig="published"); ig_link = link
             done.append(f"📷 Instagram: {link}")
+            fb_link = reels.LAST_FB.get(pid)
+            if fb_link:
+                done.append(f"📘 Facebook Reels: {fb_link}")
         except Exception as e:
             done.append(f"⚠️ Instagram: {e}")
+        # Facebook: пост с кликабельной ссылкой на статью (превью — обложка статьи)
+        import facebook
+        if article and facebook.enabled():
+            try:
+                text = re.sub(r"<[^>]+>", "", data.get("tg_text") or "").strip()
+                fb_post = await facebook.post_link(f"{text}\n\n📖 Toʻliq maqola / полная статья: {article}", article)
+                fb_link = fb_post
+                done.append(f"📘 Facebook пост: {fb_post}")
+            except Exception as e:
+                done.append(f"⚠️ Facebook: {e}")
     if action in ("tg", "all") and row["tg"] in ("new", "scheduled", "wait_blog"):
         try:
-            link = await _do_tg(bot, data, article, ig_link)
+            link = await _do_tg(bot, data, article, ig_link, fb_link)
             _set(pid, tg="published")
             done.append(f"📢 Telegram: {link}")
         except Exception as e:
