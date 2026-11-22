@@ -125,7 +125,9 @@ async def _is_live(url) -> bool:
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as s:
             async with s.get(url, allow_redirects=True) as r:
-                return r.status == 200
+                # сайт по неизвестному адресу может отдать другую страницу — проверяем, что это именно статья
+                slug = url.rstrip("/").rsplit("/", 1)[-1]
+                return r.status == 200 and f"/blog/{slug}/" in await r.text()
     except Exception:
         return False
 
@@ -269,7 +271,8 @@ async def _blog_queue(request: web.Request) -> web.Response:
     if not _auth(request):
         return web.json_response({"error": "forbidden"}, status=403)
     with _cfg["db"]() as con:
-        rows = con.execute("SELECT id, data FROM proposals WHERE blog='approved'").fetchall()
+        rows = con.execute("SELECT id, data FROM proposals WHERE blog IN ('approved','published') "
+                           "ORDER BY created_at DESC LIMIT 20").fetchall()  # сайт сам пропускает уже выложенные
     out = []
     for r in rows:
         d = json.loads(r["data"])
