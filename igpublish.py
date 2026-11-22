@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 import aiohttp
 from aiohttp import web
 
-GRAPH = "https://graph.instagram.com/v23.0"
+from igsync import GRAPH, ME  # graph.facebook.com + ID Instagram при ключе страницы
 PUBLIC_URL = "https://" + os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
 IMG_DIR = os.path.join(os.path.dirname(__file__), "content", "img")
 UP_DIR = os.path.join(os.path.dirname(os.environ.get("DB_PATH", "data/bot.db")), "media")
@@ -149,9 +149,9 @@ async def publish(media_url: str, caption: str, kind: str = "photo", cover_url: 
                 params["cover_url"] = cover_url
         else:
             params.update(image_url=media_url)
-        container = await _post(s, "me/media", params)
+        container = await _post(s, f"{ME}/media", params)
         await _wait_ready(s, container["id"])
-        published = await _post(s, "me/media_publish", {"creation_id": container["id"]})
+        published = await _post(s, f"{ME}/media_publish", {"creation_id": container["id"]})
         from igsync import _get_token
         async with s.get(f"{GRAPH}/{published['id']}",
                          params={"fields": "permalink", "access_token": _get_token()}) as r:
@@ -167,13 +167,13 @@ async def publish_carousel(urls: list[str], caption: str) -> str:
     async with aiohttp.ClientSession() as s:
         children = []
         for u in urls[:10]:
-            c = await _post(s, "me/media", {"image_url": u, "is_carousel_item": "true"})
+            c = await _post(s, f"{ME}/media", {"image_url": u, "is_carousel_item": "true"})
             children.append(c["id"])
         for cid in children:
             await _wait_ready(s, cid)
-        container = await _post(s, "me/media", {"media_type": "CAROUSEL", "children": ",".join(children), "caption": caption})
+        container = await _post(s, f"{ME}/media", {"media_type": "CAROUSEL", "children": ",".join(children), "caption": caption})
         await _wait_ready(s, container["id"])
-        published = await _post(s, "me/media_publish", {"creation_id": container["id"]})
+        published = await _post(s, f"{ME}/media_publish", {"creation_id": container["id"]})
         async with s.get(f"{GRAPH}/{published['id']}", params={"fields": "permalink", "access_token": _get_token()}) as r:
             info = await r.json()
     return info.get("permalink", "")
@@ -183,7 +183,7 @@ async def publish_story(media_url: str) -> None:
     """Сторис 9:16: видео (.mp4, с музыкой) или картинка."""
     key = "video_url" if media_url.endswith(".mp4") else "image_url"
     async with aiohttp.ClientSession() as s:
-        container = await _post(s, "me/media", {"media_type": "STORIES", key: media_url})
+        container = await _post(s, f"{ME}/media", {"media_type": "STORIES", key: media_url})
         await _wait_ready(s, container["id"])
-        await _post(s, "me/media_publish", {"creation_id": container["id"]})
+        await _post(s, f"{ME}/media_publish", {"creation_id": container["id"]})
     logging.info("Сторис опубликована")

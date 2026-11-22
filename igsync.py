@@ -14,7 +14,12 @@ import aiohttp
 from aiogram import Bot
 from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboardMarkup
 
-GRAPH = "https://graph.instagram.com/v23.0"
+# Если есть бессрочный ключ страницы Facebook (к ней привязан Instagram) — работаем через него:
+# он не истекает и не сбрасывается. Иначе — прежний ключ Instagram Login.
+FB_PAGE_TOKEN = os.environ.get("FB_PAGE_TOKEN", "")
+IG_USER_ID = os.environ.get("IG_USER_ID", "17841452391742663")
+GRAPH = "https://graph.facebook.com/v23.0" if FB_PAGE_TOKEN else "https://graph.instagram.com/v23.0"
+ME = IG_USER_ID if FB_PAGE_TOKEN else "me"
 TG_UPLOAD_LIMIT = 49 * 1024 * 1024
 _cfg: dict = {}
 
@@ -30,6 +35,8 @@ def setup(db_func, channel_id: str, admin_id: int, tz) -> None:
 
 
 def _get_token() -> str | None:
+    if FB_PAGE_TOKEN:
+        return FB_PAGE_TOKEN
     with _cfg["db"]() as con:
         row = con.execute("SELECT v FROM kv WHERE k='ig_token'").fetchone()
     return row["v"] if row else os.environ.get("IG_TOKEN")
@@ -47,7 +54,7 @@ def _skip_codes() -> set[str]:
 async def refresh_token() -> None:
     """Продлевает долгосрочный токен Instagram (живёт 60 дней); запускать раз в неделю."""
     token = _get_token()
-    if not token:
+    if not token or FB_PAGE_TOKEN:  # ключ страницы бессрочный — продлевать не нужно
         return
     async with aiohttp.ClientSession() as s:
         async with s.get(f"{GRAPH.rsplit('/', 1)[0]}/refresh_access_token",
@@ -61,7 +68,7 @@ async def refresh_token() -> None:
 
 
 async def _all_media(session: aiohttp.ClientSession, token: str) -> list[dict]:
-    url = f"{GRAPH}/me/media"
+    url = f"{GRAPH}/{ME}/media"
     params = {"fields": "id,media_type,media_product_type,timestamp,permalink,media_url,caption,thumbnail_url",
               "limit": 100, "access_token": token}
     items: list[dict] = []
