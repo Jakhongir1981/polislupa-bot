@@ -70,9 +70,11 @@ def _wrap(draw, text, font, width):
     return lines
 
 
-def compose(photo: bytes, title: str, chip: str = "", size=(1200, 630)) -> Image.Image:
+def compose(photo: bytes, title: str, chip: str = "", size=(1600, 900)) -> Image.Image:
+    """Горизонтальная обложка 16:9 (сайт, Telegram, Facebook) или вертикальная 1080×1350 (Instagram)."""
     w, h = size
     tall = h > w
+    k = 1 if tall else w / 1200  # размеры шрифтов и отступов заданы для ширины 1200
     im = _cover_crop(Image.open(io.BytesIO(photo)).convert("RGB"), w, h)
     # затемнение: общее лёгкое + градиент к тёмно-синему внизу, где текст
     shade = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -87,17 +89,17 @@ def compose(photo: bytes, title: str, chip: str = "", size=(1200, 630)) -> Image
         d.line([(0, y), (w, y)], fill=(*NAVY, int(min(a, 245))))
     im = Image.alpha_composite(im.convert("RGBA"), shade)
     d = ImageDraw.Draw(im)
-    m = 26 if not tall else 30
+    m = round(26 * k) if not tall else 30
     d.rectangle([m, m, w - m, h - m], outline=(*GOLD, 255), width=2)
     # логотип
-    pad = 58 if not tall else 70
-    lf = _font("Inter.ttf", 30 if not tall else 38, "Bold")
+    pad = round(64 * k) if not tall else 70
+    lf = _font("Inter.ttf", round(30 * k) if not tall else 38, "Bold")
     d.text((pad, pad - 6), "Polis", font=lf, fill=CREAM)
     d.text((pad + d.textlength("Polis", font=lf), pad - 6), "Lupa", font=lf, fill=GOLD)
     # заголовок: подбираем размер, чтобы влез в 3 строки (4 — для вертикального)
     maxw = w - 2 * pad
     max_lines = 4 if tall else 3
-    for fs in ((78, 72, 66, 60, 54) if tall else (58, 54, 50, 46, 42, 38)):
+    for fs in ((78, 72, 66, 60, 54) if tall else tuple(round(x * k) for x in (60, 56, 52, 48, 44, 40))):
         tf = _font("Playfair.ttf", fs, "Bold")
         lines = _wrap(d, title, tf, maxw)
         if len(lines) <= max_lines:
@@ -107,9 +109,9 @@ def compose(photo: bytes, title: str, chip: str = "", size=(1200, 630)) -> Image
     for i, line in enumerate(lines):
         d.text((pad, y + i * lh), line, font=tf, fill=CREAM)
     if chip:
-        cf = _font("Inter.ttf", 22 if not tall else 28, "SemiBold")
-        cy = y - (40 if not tall else 52)
-        d.rectangle([pad, cy - 16, pad + 56, cy - 12], fill=GOLD)
+        cf = _font("Inter.ttf", round(22 * k) if not tall else 28, "SemiBold")
+        cy = y - (round(42 * k) if not tall else 52)
+        d.rectangle([pad, cy - round(16 * k), pad + round(56 * k), cy - round(12 * k)], fill=GOLD)
         d.text((pad, cy), chip.upper(), font=cf, fill=GOLD)
     return im.convert("RGB")
 
