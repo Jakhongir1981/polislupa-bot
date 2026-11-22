@@ -174,8 +174,8 @@ async def cb_prop(c: CallbackQuery) -> None:
             _set(pid, tg="scheduled"); marks.append("Telegram")
         if action in ("ig", "all") and row["ig"] in ("new", "scheduled"):
             _set(pid, ig="scheduled"); marks.append("Instagram")
-        if action in ("blog", "all") and row["blog"] == "new" and data.get("blog_title"):
-            _set(pid, blog="approved"); marks.append("блог")
+        if action in ("blog", "all") and row["blog"] == "new" and _article_url(data):
+            _set(pid, blog="sched_blog"); marks.append("сайт (статья выйдет первой, посты — со ссылкой на неё)")
         await c.answer("Запланировано")
         await bot.send_message(_cfg["admin"], f"🗓 <b>{data.get('topic', '')}</b>: выйдет {when[8:10]}.{when[5:7]} в {when[11:]} — "
                                               + ", ".join(marks))
@@ -234,10 +234,15 @@ async def tick(bot: Bot) -> None:
     """Публикует одобренные предложения, у которых наступило время publish_at."""
     now = datetime.now(_cfg["tz"]).replace(tzinfo=None)
     with _cfg["db"]() as con:
-        rows = con.execute("SELECT * FROM proposals WHERE tg='scheduled' OR ig='scheduled'").fetchall()
+        rows = con.execute("SELECT * FROM proposals WHERE tg='scheduled' OR ig='scheduled' OR blog='sched_blog'").fetchall()
     for row in rows:
         data = json.loads(row["data"])
         if datetime.strptime(data["publish_at"], "%Y-%m-%d %H:%M") > now:
+            continue
+        if row["blog"] == "sched_blog":  # время пришло: сначала статья, посты ждут её
+            upd = {"blog": "approved", "wait_since": now.isoformat()}
+            upd.update({ch: "wait_blog" for ch in ("tg", "ig") if row[ch] == "scheduled"})
+            _set(row["id"], **upd)
             continue
         action = "all" if row["tg"] == "scheduled" and row["ig"] == "scheduled" else ("tg" if row["tg"] == "scheduled" else "ig")
         await _publish(bot, row["id"], data, action, row)
