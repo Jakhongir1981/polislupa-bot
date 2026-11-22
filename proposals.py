@@ -3,13 +3,16 @@
 Агент присылает POST /api/proposal (с секретом PROPOSAL_KEY): тема, пост для Telegram,
 обложка, слайды карусели для Instagram и статья для блога (uz/ru).
 Бот присылает владельцу предложение с кнопками: 📢 Telegram, 📷 Instagram-карусель, 📝 Блог, ❌.
-Одобренные статьи блога агент забирает в следующий запуск (GET /api/proposals/blog) и публикует на сайте.
+Воронка: при «✅ Везде» сначала выходит статья на сайте (GitHub Actions сайта каждые 5 минут забирает
+GET /api/blog/pending и публикует), а пост в Telegram и карусель в Instagram выходят сразу после неё —
+со ссылкой на статью. Если статья не появилась за 45 минут, посты выходят без ожидания.
 """
 
 import base64
 import json
 import logging
 import os
+import aiohttp
 from datetime import datetime
 
 from aiogram import Bot, F, Router
@@ -29,10 +32,14 @@ def setup(db_func, bot: Bot, channel_id, admin_id: int, tz) -> None:
     with db_func() as con:
         con.execute("CREATE TABLE IF NOT EXISTS proposals (id TEXT PRIMARY KEY, data TEXT, tg TEXT, ig TEXT, blog TEXT, "
                     "created_at TEXT)")
+        cols = [r[1] for r in con.execute("PRAGMA table_info(proposals)")]
+        if "wait_since" not in cols:
+            con.execute("ALTER TABLE proposals ADD COLUMN wait_since TEXT")
     igpublish.EXTRA_ROUTES.extend([
         ("POST", "/api/proposal", _receive),
         ("GET", "/api/proposals/blog", _blog_queue),
         ("POST", "/api/proposals/blog_done", _blog_done),
+        ("GET", "/api/blog/pending", _blog_pending),  # без ключа: там только уже одобренные к публикации статьи
     ])
 
 
@@ -99,10 +106,35 @@ async def _send_to_owner(pid, data, raw) -> None:
                            + "☝️ Что публикуем? Можно нажать несколько кнопок по очереди.", reply_markup=kb)
 
 
-async def _do_tg(bot, data) -> str:
+SITE = "https://polislupa.uz"
+WAIT_MIN = 45
+
+
+def _article_url(data):
+    """Адрес статьи на сайте (узбекская версия; сайт сам переключает язык)."""
+    posts = data.get("blog_posts") or []
+    if not posts:
+        return None
+    p = next((x for x in posts if x.get("lang") == "uz"), posts[0])
+    return f"{SITE}/blog/{p['slug']}/"
+
+
+async def _is_live(url) -> bool:
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as s:
+            async with s.get(url, allow_redirects=True) as r:
+                return r.status == 200
+    except Exception:
+        return False
+
+
+async def _do_tg(bot, data, article=None) -> str:
     text = data.get("tg_text") or ""
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="📝 Ariza / Заявка",
-                                                                     url="https://t.me/polislupa_bot?start=tg")]])
+    rows = []
+    if article:
+        rows.append([InlineKeyboardButton(text="📖 Maqolani oʻqish / Читать статью", url=article)])
+    rows.append([InlineKeyboardButton(text="📝 Ariza / Заявка", url="https://t.me/polislupa_bot?start=tg")])
+    kb = InlineKeyboardMarkup(inline_keyboard=rows)
     if data.get("cover_url"):
         path = os.path.join(igpublish.UP_DIR, os.path.basename(data["cover_url"]))
         with open(path, "rb") as f:
@@ -148,31 +180,51 @@ async def cb_prop(c: CallbackQuery) -> None:
         await bot.send_message(_cfg["admin"], f"🗓 <b>{data.get('topic', '')}</b>: выйдет {when[8:10]}.{when[5:7]} в {when[11:]} — "
                                               + ", ".join(marks))
         return
+    article = _article_url(data)
+    if action in ("blog", "all") and article and row["blog"] == "new":
+        _set(pid, blog="approved")
+        if action == "all":
+            waiting = []
+            for ch, name in (("tg", "Telegram"), ("ig", "Instagram")):
+                if row[ch] == "new":
+                    _set(pid, **{ch: "wait_blog"}); waiting.append(name)
+            _set(pid, wait_since=datetime.now(_cfg["tz"]).replace(tzinfo=None).isoformat())
+            await c.answer("Принято")
+            await bot.send_message(_cfg["admin"], f"📝 <b>{data.get('topic', '')}</b>: статья уходит на сайт (5–15 мин). "
+                                                  f"{' и '.join(waiting)} выйдут сразу после неё — со ссылкой на статью.")
+            return
+        await c.answer("Принято")
+        await bot.send_message(_cfg["admin"], "📝 Статья уходит на сайт (5–15 мин), пришлю ссылку.")
+        return
     await c.answer("Принято, публикую…")
-    await _publish(bot, pid, data, action, row)
+    await _publish(bot, pid, data, action, _get(pid))
 
 
 async def _publish(bot, pid, data, action, row) -> None:
     done = []
-    if action in ("tg", "all") and row["tg"] in ("new", "scheduled"):
+    article = _article_url(data) if row["blog"] in ("approved", "published") else None
+    if article and row["blog"] == "approved" and not await _is_live(article):
+        article = None  # статья ещё не вышла — ссылку не ставим
+    if action in ("tg", "all") and row["tg"] in ("new", "scheduled", "wait_blog"):
         try:
-            link = await _do_tg(bot, data)
+            link = await _do_tg(bot, data, article)
             _set(pid, tg="published")
             done.append(f"📢 Telegram: {link}")
         except Exception as e:
             done.append(f"⚠️ Telegram: {e}")
-    if action in ("ig", "all") and row["ig"] in ("new", "scheduled"):
+    if action in ("ig", "all") and row["ig"] in ("new", "scheduled", "wait_blog"):
         try:
             urls = data.get("slide_urls") or ([data["cover_url"]] if data.get("cover_url") else [])
             cap = igpublish.ig_caption(data.get("ig_caption") or data.get("tg_text") or "")
+            if article:
+                cap += "\n\n📖 Toʻliq maqola — polislupa.uz (havola profilda)"
             link = await (igpublish.publish_carousel(urls, cap) if len(urls) > 1 else igpublish.publish(urls[0], cap))
             _set(pid, ig="published")
             done.append(f"📷 Instagram: {link}")
         except Exception as e:
             done.append(f"⚠️ Instagram: {e}")
-    if action in ("blog", "all") and row["blog"] == "new" and data.get("blog_title"):
-        _set(pid, blog="approved")
-        done.append("📝 Блог: одобрено — статья выйдет на сайте при следующем запуске команды (до 8 часов).")
+    if article:
+        done.append(f"📝 Сайт: {article}")
     if done:
         await bot.send_message(_cfg["admin"], f"<b>{data.get('topic', '')}</b>\n" + "\n".join(done),
                                disable_web_page_preview=True)
@@ -189,6 +241,24 @@ async def tick(bot: Bot) -> None:
             continue
         action = "all" if row["tg"] == "scheduled" and row["ig"] == "scheduled" else ("tg" if row["tg"] == "scheduled" else "ig")
         await _publish(bot, row["id"], data, action, row)
+    # воронка: ждём выхода статьи на сайте, потом публикуем Telegram и Instagram со ссылкой
+    with _cfg["db"]() as con:
+        rows = con.execute("SELECT * FROM proposals WHERE tg='wait_blog' OR ig='wait_blog' OR blog='approved'").fetchall()
+    for row in rows:
+        data = json.loads(row["data"])
+        article = _article_url(data)
+        live = bool(article) and await _is_live(article)
+        if live and row["blog"] == "approved":
+            _set(row["id"], blog="published")
+            if "wait_blog" not in (row["tg"], row["ig"]):
+                await bot.send_message(_cfg["admin"], f"📝 Статья опубликована на сайте:\n{article}")
+        waiting = [ch for ch in ("tg", "ig") if row[ch] == "wait_blog"]
+        if not waiting:
+            continue
+        since = datetime.fromisoformat(row["wait_since"]) if row["wait_since"] else now
+        if live or (now - since).total_seconds() > WAIT_MIN * 60:
+            action = "all" if len(waiting) == 2 else waiting[0]
+            await _publish(bot, row["id"], data, action, _get(row["id"]))
 
 
 async def _blog_queue(request: web.Request) -> web.Response:
@@ -200,6 +270,15 @@ async def _blog_queue(request: web.Request) -> web.Response:
     for r in rows:
         d = json.loads(r["data"])
         out.append({"id": r["id"], "blog_posts": d.get("blog_posts", []), "cover_url": d.get("cover_url")})
+    return web.json_response({"items": out})
+
+
+async def _blog_pending(request: web.Request) -> web.Response:
+    """Одобренные статьи, которых ещё нет на сайте — их забирает GitHub Actions сайта."""
+    with _cfg["db"]() as con:
+        rows = con.execute("SELECT id, data FROM proposals WHERE blog='approved'").fetchall()
+    out = [{"id": r["id"], "blog_posts": json.loads(r["data"]).get("blog_posts", []),
+            "cover_url": json.loads(r["data"]).get("cover_url")} for r in rows]
     return web.json_response({"items": out})
 
 
