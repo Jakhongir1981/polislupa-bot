@@ -19,6 +19,19 @@ import igpublish
 W, H = 1080, 1920
 SLIDE_SEC = 4
 LABEL = os.path.join(igpublish.IMG_DIR, "story-label.png")
+MUSIC = os.path.join(os.path.dirname(__file__), "content", "audio", "news-bed.m4a")  # своя тихая подложка, без авторских прав
+STORY_SEC = 7
+
+
+def _audio_args(seconds: float) -> tuple[list, list]:
+    """Музыка по кругу, мягкое появление и затухание; если файла нет — тишина."""
+    if os.path.exists(MUSIC):
+        inp = ["-stream_loop", "-1", "-i", MUSIC]
+        af = ["-af", f"volume=0.8,afade=t=in:d=1,afade=t=out:st={max(seconds - 1.5, 0):.2f}:d=1.5"]
+    else:
+        inp = ["-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo"]
+        af = []
+    return inp, af
 
 
 def local_path(url_or_path: str) -> str:
@@ -69,15 +82,17 @@ def build_reel(images: list[str], name: str) -> tuple[str, str]:
             _frame(local_path(p)).save(fp)
             lst.append(fp)
         sec = SLIDE_SEC if len(lst) > 1 else 7
+        total = sec * len(lst)
+        a_in, a_f = _audio_args(total)
         with open(os.path.join(tmp, "list.txt"), "w") as f:
             for fp in lst:
                 f.write(f"file '{fp}'\nduration {sec}\n")
             f.write(f"file '{lst[-1]}'\n")
         out = os.path.join(igpublish.UP_DIR, f"{name}_reel.mp4")
         subprocess.run([ff, "-y", "-f", "concat", "-safe", "0", "-i", os.path.join(tmp, "list.txt"),
-                        "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+                        *a_in, "-map", "0:v", "-map", "1:a", *a_f, "-t", str(total),
                         "-vf", "fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
-                        "-c:a", "aac", "-b:a", "64k", "-shortest", "-movflags", "+faststart", out],
+                        "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", out],
                        check=True, capture_output=True)
         cover = os.path.join(igpublish.UP_DIR, f"{name}_reelcover.jpg")
         Image.open(lst[0]).save(cover, quality=90)
@@ -86,8 +101,15 @@ def build_reel(images: list[str], name: str) -> tuple[str, str]:
 
 
 def build_story(image: str, name: str) -> str:
-    out = os.path.join(igpublish.UP_DIR, f"{name}_story.jpg")
-    _frame(local_path(image), label=True).save(out, quality=90)
+    """Сторис-видео 9:16 на 7 секунд с той же музыкой."""
+    img = os.path.join(igpublish.UP_DIR, f"{name}_story.jpg")
+    _frame(local_path(image), label=True).save(img, quality=90)
+    out = os.path.join(igpublish.UP_DIR, f"{name}_story.mp4")
+    a_in, a_f = _audio_args(STORY_SEC)
+    subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loop", "1", "-i", img, *a_in, "-map", "0:v", "-map", "1:a",
+                    *a_f, "-t", str(STORY_SEC), "-vf", "fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "veryfast",
+                    "-crf", "22", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", out],
+                   check=True, capture_output=True)
     return f"{igpublish.public_base()}/media/up/{os.path.basename(out)}"
 
 

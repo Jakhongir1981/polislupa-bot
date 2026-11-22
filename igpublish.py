@@ -177,10 +177,11 @@ async def publish_carousel(urls: list[str], caption: str) -> str:
     return info.get("permalink", "")
 
 
-async def publish_story(image_url: str) -> None:
-    """Сторис из картинки 9:16."""
+async def publish_story(media_url: str) -> None:
+    """Сторис 9:16: видео (.mp4, с музыкой) или картинка."""
+    key = "video_url" if media_url.endswith(".mp4") else "image_url"
     async with aiohttp.ClientSession() as s:
-        container = await _post(s, "me/media", {"media_type": "STORIES", "image_url": image_url})
+        container = await _post(s, "me/media", {"media_type": "STORIES", key: media_url})
         await _wait_ready(s, container["id"])
         await _post(s, "me/media_publish", {"creation_id": container["id"]})
     logging.info("Сторис опубликована")
