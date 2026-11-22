@@ -81,9 +81,9 @@ def _save(fid: str, **kw) -> None:
             con.execute(f"UPDATE drive_items SET {k}=? WHERE file_id=?", (v, fid))
 
 
-def _channel_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="📝 Ariza / Заявка", url="https://t.me/polislupa_bot?start=tg")]])
+def _channel_kb(ig_link=None):
+    import igpublish
+    return igpublish.funnel_kb(ig_link)  # воронка: сайт, бот, Instagram
 
 
 async def check_inbox(bot: Bot) -> None:
@@ -158,6 +158,7 @@ async def cb_drive(c: CallbackQuery) -> None:
             import igpublish
             try:
                 link = await igpublish.publish(row["ig_url"], igpublish.ig_caption(row["caption"] or ""), row["kind"])
+                await igpublish.add_ig_button(c.bot, _cfg["channel"], msg.message_id, link)
                 await c.bot.send_message(_cfg["admin"], f"📷 Вышло и в Instagram: {link}")
             except Exception as e:
                 logging.error("Instagram: %s", e)

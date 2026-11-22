@@ -42,13 +42,10 @@ def _load_queue() -> list[dict]:
         return []
 
 
-def _kb(post: dict) -> InlineKeyboardMarkup | None:
-    rows = post.get("buttons")
-    if not rows:
-        return None
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=b[0], url=b[1]) for b in row] for row in rows
-    ])
+def _kb(post: dict, ig_link=None) -> InlineKeyboardMarkup | None:
+    import igpublish
+    base = [[InlineKeyboardButton(text=b[0], url=b[1]) for b in row] for row in (post.get("buttons") or [])]
+    return igpublish.funnel_kb(ig_link, post.get("article"), base)  # воронка: сайт, бот, Instagram
 
 
 def _status(post_id: str) -> str | None:
@@ -131,17 +128,20 @@ async def tick(bot: Bot) -> None:
                 _set_status(pid, "published", msg.message_id)
                 logging.info("Опубликован пост %s", pid)
                 if st == "approved_ig" and post.get("photo"):
-                    await _to_instagram(bot, post)
+                    await _to_instagram(bot, post, msg)
         except Exception as e:
             logging.error("Ошибка с постом %s: %s", pid, e)
 
 
-async def _to_instagram(bot: Bot, post: dict) -> None:
+async def _to_instagram(bot: Bot, post: dict, msg=None) -> None:
     import igpublish
     extra = "🧩 Javobingizni izohlarda yozing 👇" if post.get("poll") else ""
     try:
         link = await igpublish.publish(igpublish.cover_url(post["photo"]),
                                        igpublish.ig_caption(post.get("text", ""), extra))
+        if msg is not None and not post.get("poll"):
+            await bot.edit_message_reply_markup(chat_id=_cfg["channel"], message_id=msg.message_id,
+                                                reply_markup=_kb(post, link))
         await bot.send_message(_cfg["admin"], f"📷 Пост вышел и в Instagram: {link}")
     except Exception as e:
         logging.error("Instagram: %s", e)

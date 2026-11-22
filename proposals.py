@@ -128,13 +128,9 @@ async def _is_live(url) -> bool:
         return False
 
 
-async def _do_tg(bot, data, article=None) -> str:
+async def _do_tg(bot, data, article=None, ig_link=None) -> str:
     text = data.get("tg_text") or ""
-    rows = []
-    if article:
-        rows.append([InlineKeyboardButton(text="📖 Maqolani oʻqish / Читать статью", url=article)])
-    rows.append([InlineKeyboardButton(text="📝 Ariza / Заявка", url="https://t.me/polislupa_bot?start=tg")])
-    kb = InlineKeyboardMarkup(inline_keyboard=rows)
+    kb = igpublish.funnel_kb(ig_link, article)  # воронка: статья, Instagram, бот заявок
     if data.get("cover_url"):
         path = os.path.join(igpublish.UP_DIR, os.path.basename(data["cover_url"]))
         with open(path, "rb") as f:
@@ -205,24 +201,24 @@ async def _publish(bot, pid, data, action, row) -> None:
     article = _article_url(data) if row["blog"] in ("approved", "published") else None
     if article and row["blog"] == "approved" and not await _is_live(article):
         article = None  # статья ещё не вышла — ссылку не ставим
+    ig_link = None
+    if action in ("ig", "all") and row["ig"] in ("new", "scheduled", "wait_blog"):
+        try:
+            urls = data.get("slide_urls") or ([data["cover_url"]] if data.get("cover_url") else [])
+            cap = igpublish.ig_caption(data.get("ig_caption") or data.get("tg_text") or "",
+                                       "📖 Toʻliq maqola / полная статья — polislupa.uz" if article else "")
+            link = await (igpublish.publish_carousel(urls, cap) if len(urls) > 1 else igpublish.publish(urls[0], cap))
+            _set(pid, ig="published"); ig_link = link
+            done.append(f"📷 Instagram: {link}")
+        except Exception as e:
+            done.append(f"⚠️ Instagram: {e}")
     if action in ("tg", "all") and row["tg"] in ("new", "scheduled", "wait_blog"):
         try:
-            link = await _do_tg(bot, data, article)
+            link = await _do_tg(bot, data, article, ig_link)
             _set(pid, tg="published")
             done.append(f"📢 Telegram: {link}")
         except Exception as e:
             done.append(f"⚠️ Telegram: {e}")
-    if action in ("ig", "all") and row["ig"] in ("new", "scheduled", "wait_blog"):
-        try:
-            urls = data.get("slide_urls") or ([data["cover_url"]] if data.get("cover_url") else [])
-            cap = igpublish.ig_caption(data.get("ig_caption") or data.get("tg_text") or "")
-            if article:
-                cap += "\n\n📖 Toʻliq maqola — polislupa.uz (havola profilda)"
-            link = await (igpublish.publish_carousel(urls, cap) if len(urls) > 1 else igpublish.publish(urls[0], cap))
-            _set(pid, ig="published")
-            done.append(f"📷 Instagram: {link}")
-        except Exception as e:
-            done.append(f"⚠️ Instagram: {e}")
     if article:
         done.append(f"📝 Сайт: {article}")
     if done:

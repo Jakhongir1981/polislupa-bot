@@ -9,6 +9,8 @@ import asyncio
 import logging
 import os
 import re
+import logging
+log = logging.getLogger(__name__)
 
 import aiohttp
 from aiohttp import web
@@ -56,15 +58,53 @@ def cover_url(rel_path: str) -> str:
 
 # ---------- подпись ----------
 def ig_caption(html_text: str, extra: str = "") -> str:
-    """Telegram-HTML → текст для Instagram (без тегов, со ссылкой «в шапке профиля»)."""
+    """Telegram-HTML → текст для Instagram (без тегов) + воронка: Telegram-канал, сайт, бот заявок."""
     text = re.sub(r"<[^>]+>", "", html_text or "")
     text = text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
-    tail = "\n\n📲 Telegram-kanal va bot — profil sarlavhasidagi havola orqali 👆"
+    tail = ("\n\n📢 Telegram: t.me/jakhongir_bakiev\n🌐 Sayt: polislupa.uz\n"
+            "✍️ Ariza / заявка: @polislupa_bot\n👆 Havolalar — profil sarlavhasida")
     if extra:
         tail = "\n\n" + extra + tail
     tags = "\n\n#sugurta #страхование #polislupa #ozbekiston"
     return (text + tail + tags)[:2200]
+
+
+SITE = "https://polislupa.uz"
+BOT_LINK = "https://t.me/polislupa_bot?start=tg"
+
+
+def funnel_rows(ig_link=None, article=None, base_rows=None):
+    """Кнопки под постом в канале: всё ссылается друг на друга (статья ↔ Instagram ↔ сайт ↔ бот заявок)."""
+    from aiogram.types import InlineKeyboardButton as B
+    rows = [list(r) for r in (base_rows or [])]
+    have = {b.url for r in rows for b in r if getattr(b, "url", None)}
+    if article and article not in have:
+        rows.insert(0, [B(text="📖 Maqolani oʻqish / Читать статью", url=article)])
+    mid = []
+    if ig_link and ig_link not in have:
+        mid.append(B(text="📷 Instagram", url=ig_link))
+    if not article and not any(u and u.startswith(SITE) for u in have):
+        mid.append(B(text="🌐 PolisLupa.uz", url=SITE + "/blog/"))
+    if mid:
+        rows.append(mid)
+    if not any(u and "polislupa_bot" in u for u in have):
+        rows.append([B(text="📝 Ariza / Заявка", url=BOT_LINK)])
+    return rows
+
+
+def funnel_kb(ig_link=None, article=None, base_rows=None):
+    from aiogram.types import InlineKeyboardMarkup
+    return InlineKeyboardMarkup(inline_keyboard=funnel_rows(ig_link, article, base_rows))
+
+
+async def add_ig_button(bot, chat_id, message_id, ig_link, article=None, base_rows=None) -> None:
+    """После выхода в Instagram добавляет под постом в Telegram кнопку на него."""
+    try:
+        await bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id,
+                                            reply_markup=funnel_kb(ig_link, article, base_rows))
+    except Exception as e:
+        log.warning("Не удалось добавить кнопку Instagram: %s", e)
 
 
 # ---------- публикация ----------

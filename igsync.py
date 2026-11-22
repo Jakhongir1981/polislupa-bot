@@ -142,10 +142,7 @@ async def post_next_legacy(bot: Bot, preview_chat: int | None = None) -> None:
         caption = _escape(_caption_for(m))
         footer = "\n\n📲 Savollar va arizalar — bot orqali 👇"
         caption = (caption[: 1024 - len(footer) - 3] + "…" if len(caption) + len(footer) > 1024 else caption) + footer
-        kb = InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="📝 Ariza / Заявка", url="https://t.me/polislupa_bot?start=tg"),
-            InlineKeyboardButton(text="📷 Instagram", url=m["permalink"]),
-        ]])
+        kb = __import__("igpublish").funnel_kb(m["permalink"])
         try:
             video = None
             if m.get("media_url"):
@@ -215,10 +212,7 @@ def _build(m: dict):
     caption = _escape(_caption_for(m))
     footer = "\n\n📲 Savollar va arizalar — bot orqali 👇"
     caption = (caption[: 1024 - len(footer) - 3] + "…" if len(caption) + len(footer) > 1024 else caption) + footer
-    kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="📝 Ariza / Заявка", url="https://t.me/polislupa_bot?start=tg"),
-        InlineKeyboardButton(text="📷 Instagram", url=m["permalink"]),
-    ]])
+    kb = __import__("igpublish").funnel_kb(m["permalink"])
     return caption, kb
 
 
