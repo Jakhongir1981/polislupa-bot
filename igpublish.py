@@ -52,6 +52,10 @@ def save_upload(name: str, data: bytes) -> str:
     return f"{PUBLIC_URL}/media/up/{safe}"
 
 
+def public_base() -> str:
+    return PUBLIC_URL
+
+
 def cover_url(rel_path: str) -> str:
     return f"{PUBLIC_URL}/media/img/{os.path.basename(rel_path)}"
 
@@ -133,12 +137,14 @@ async def _wait_ready(session, container_id: str, timeout: int = 300) -> None:
     raise RuntimeError("Instagram слишком долго обрабатывает видео")
 
 
-async def publish(media_url: str, caption: str, kind: str = "photo") -> str:
+async def publish(media_url: str, caption: str, kind: str = "photo", cover_url: str | None = None) -> str:
     """Публикует фото или видео (Reels). Возвращает ссылку на публикацию."""
     async with aiohttp.ClientSession() as s:
         params = {"caption": caption}
         if kind == "video":
             params.update(media_type="REELS", video_url=media_url, share_to_feed="true")
+            if cover_url:
+                params["cover_url"] = cover_url
         else:
             params.update(image_url=media_url)
         container = await _post(s, "me/media", params)
@@ -169,3 +175,12 @@ async def publish_carousel(urls: list[str], caption: str) -> str:
         async with s.get(f"{GRAPH}/{published['id']}", params={"fields": "permalink", "access_token": _get_token()}) as r:
             info = await r.json()
     return info.get("permalink", "")
+
+
+async def publish_story(image_url: str) -> None:
+    """Сторис из картинки 9:16."""
+    async with aiohttp.ClientSession() as s:
+        container = await _post(s, "me/media", {"media_type": "STORIES", "image_url": image_url})
+        await _wait_ready(s, container["id"])
+        await _post(s, "me/media_publish", {"creation_id": container["id"]})
+    logging.info("Сторис опубликована")

@@ -39,7 +39,8 @@ def setup(db_func, bot: Bot, channel_id, admin_id: int, tz) -> None:
         ("POST", "/api/proposal", _receive),
         ("GET", "/api/proposals/blog", _blog_queue),
         ("POST", "/api/proposals/blog_done", _blog_done),
-        ("GET", "/api/blog/pending", _blog_pending),  # без ключа: там только уже одобренные к публикации статьи
+        ("GET", "/api/blog/pending", _blog_pending),
+        ("POST", "/api/proposals/reel", _reel_again),  # без ключа: там только уже одобренные к публикации статьи
     ])
 
 
@@ -207,7 +208,8 @@ async def _publish(bot, pid, data, action, row) -> None:
             urls = data.get("slide_urls") or ([data["cover_url"]] if data.get("cover_url") else [])
             cap = igpublish.ig_caption(data.get("ig_caption") or data.get("tg_text") or "",
                                        "📖 Toʻliq maqola / полная статья — polislupa.uz" if article else "")
-            link = await (igpublish.publish_carousel(urls, cap) if len(urls) > 1 else igpublish.publish(urls[0], cap))
+            import reels
+            link = await reels.publish_images(urls, cap, pid)  # Reels из слайдов + сторис-анонс
             _set(pid, ig="published"); ig_link = link
             done.append(f"📷 Instagram: {link}")
         except Exception as e:
@@ -272,6 +274,25 @@ async def _blog_queue(request: web.Request) -> web.Response:
         d = json.loads(r["data"])
         out.append({"id": r["id"], "blog_posts": d.get("blog_posts", []), "cover_url": d.get("cover_url")})
     return web.json_response({"items": out})
+
+
+async def _reel_again(request: web.Request) -> web.Response:
+    """Выпустить уже одобренное предложение ещё и как Reels + сторис (по ключу)."""
+    if not _auth(request):
+        return web.json_response({"error": "forbidden"}, status=403)
+    pid = (await request.json())["id"]
+    row = _get(pid)
+    if not row:
+        return web.json_response({"error": "not found"}, status=404)
+    data = json.loads(row["data"])
+    import reels
+    urls = data.get("slide_urls") or [data["cover_url"]]
+    article = _article_url(data) if row["blog"] in ("approved", "published") else None
+    cap = igpublish.ig_caption(data.get("ig_caption") or data.get("tg_text") or "",
+                               "📖 Toʻliq maqola / полная статья — polislupa.uz" if article else "")
+    link = await reels.publish_images(urls, cap, pid + "_r")
+    await _cfg["bot"].send_message(_cfg["admin"], f"🎬 <b>{data.get('topic', '')}</b>: вышел Reels и сторис-анонс\n{link}")
+    return web.json_response({"ok": True, "link": link})
 
 
 async def _blog_pending(request: web.Request) -> web.Response:

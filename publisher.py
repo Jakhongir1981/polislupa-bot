@@ -137,8 +137,9 @@ async def _to_instagram(bot: Bot, post: dict, msg=None) -> None:
     import igpublish
     extra = "🧩 Javobingizni izohlarda yozing 👇" if post.get("poll") else ""
     try:
-        link = await igpublish.publish(igpublish.cover_url(post["photo"]),
-                                       igpublish.ig_caption(post.get("text", ""), extra))
+        import reels
+        link = await reels.publish_images([igpublish.cover_url(post["photo"])],
+                                          igpublish.ig_caption(post.get("text", ""), extra), post["id"])
         if msg is not None and not post.get("poll"):
             await bot.edit_message_reply_markup(chat_id=_cfg["channel"], message_id=msg.message_id,
                                                 reply_markup=_kb(post, link))

@@ -157,7 +157,10 @@ async def cb_drive(c: CallbackQuery) -> None:
         if action == "okig" and row["ig_url"]:
             import igpublish
             try:
-                link = await igpublish.publish(row["ig_url"], igpublish.ig_caption(row["caption"] or ""), row["kind"])
+                import reels
+                cap = igpublish.ig_caption(row["caption"] or "")
+                link = await (reels.publish_video(row["ig_url"], cap, fid) if row["kind"] == "video"
+                              else reels.publish_images([row["ig_url"]], cap, fid))
                 await igpublish.add_ig_button(c.bot, _cfg["channel"], msg.message_id, link)
                 await c.bot.send_message(_cfg["admin"], f"📷 Вышло и в Instagram: {link}")
             except Exception as e:
