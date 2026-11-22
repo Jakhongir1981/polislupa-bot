@@ -95,7 +95,7 @@ async def _send_to_owner(pid, data, raw) -> None:
         [InlineKeyboardButton(text="❌ Отклонить всё", callback_data=f"prop:no:{pid}")],
     ])
     when = data.get("publish_at")
-    await bot.send_message(admin, ("🗓 Выйдет " + when[8:10] + "." + when[5:7] + " в " + when[11:] + " после одобрения.\n" if when else "")
+    await bot.send_message(admin, ("🗓 Выйдет " + when[8:10] + "." + when[5:7] + " в " + when[11:] + " после одобрения.\n" if when else "⚡ Время не задано — выйдет сразу после нажатия кнопки.\n")
                            + "☝️ Что публикуем? Можно нажать несколько кнопок по очереди.", reply_markup=kb)
 
 
