@@ -28,7 +28,7 @@ def _font(name: str, size: int, weight: str) -> ImageFont.FreeTypeFont:
     return f
 
 
-async def find(query: str, orientation: str = "horizontal") -> bytes | None:
+async def find(query: str, orientation: str = "horizontal", skip: int = 0) -> bytes | None:
     """Лучшее фото по запросу (английские слова). None — если ключа нет или ничего не нашлось."""
     if not KEY or not query:
         return None
@@ -39,8 +39,8 @@ async def find(query: str, orientation: str = "horizontal") -> bytes | None:
             async with s.get("https://pixabay.com/api/", params=params) as r:
                 hits = (await r.json()).get("hits", [])
             if not hits and orientation != "all":
-                return await find(query, "all")
-            for h in hits[:3]:
+                return await find(query, "all", skip)
+            for h in hits[skip:skip + 3]:
                 async with s.get(h["largeImageURL"]) as r:
                     if r.status == 200:
                         return await r.read()
