@@ -1,8 +1,8 @@
 """Reels и сторис для Instagram из картинок постов.
 
 Любая картинка или карусель превращается в вертикальное видео 9:16 (по 4 секунды на слайд) и выходит
-как Reels; после этого бот ставит сторис-анонс «Yangi Reels — profilga oʻting» с обложкой Reels.
-(Кликабельную ссылку на Reels в сторис Instagram через программу поставить не даёт.)
+как Reels. Сторис владелец делает сам из приложения (только так она кликабельна и ведёт на Reels):
+бот присылает ему ссылку на Reels и подсказку. Автосторис включается AUTO_STORY = True.
 """
 
 import asyncio
@@ -21,6 +21,14 @@ SLIDE_SEC = 4
 LABEL = os.path.join(igpublish.IMG_DIR, "story-label.png")
 MUSIC = os.path.join(os.path.dirname(__file__), "content", "audio", "news-bed.m4a")  # своя тихая подложка, без авторских прав
 STORY_SEC = 7
+AUTO_STORY = False   # Instagram не даёт программе сделать сторис кликабельной — владелец делает её сам
+NOTIFY = None        # bot.py: отправка сообщения владельцу
+
+
+async def _story_hint(link: str) -> None:
+    if NOTIFY and link:
+        await NOTIFY(f"🎬 Вышел Reels: {link}\n\n📲 Сделайте кликабельную сторис (3 нажатия): откройте ссылку → "
+                     f"✈️ «Поделиться» → «Добавить в историю» → «Ваша история».")
 
 
 def _audio_args(seconds: float) -> tuple[list, list]:
@@ -134,13 +142,19 @@ async def publish_images(images: list[str], caption: str, name: str) -> str:
     """Картинка или слайды → Reels + сторис-анонс. Возвращает ссылку на Reels."""
     video_url, cover = await asyncio.to_thread(build_reel, images, name)
     link = await igpublish.publish(video_url, caption, "video", cover_url=cover)
-    await story(images[0], name)
+    if AUTO_STORY:
+        await story(images[0], name)
+    else:
+        await _story_hint(link)
     return link
 
 
 async def publish_video(video_url: str, caption: str, name: str) -> str:
     """Готовое видео → Reels + сторис-анонс с кадром из видео."""
     link = await igpublish.publish(video_url, caption, "video")
+    if not AUTO_STORY:
+        await _story_hint(link)
+        return link
     try:
         frame = await asyncio.to_thread(video_frame, video_url, name)
         await story(frame, name)

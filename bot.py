@@ -581,6 +581,8 @@ async def main() -> None:
     dp.include_router(drive.router)
     dp.include_router(proposals.router)
     dp.include_router(router)
+    import reels
+    reels.NOTIFY = lambda text: bot.send_message(ADMIN_CHAT_ID, text, disable_web_page_preview=True)
     publisher.setup(db, ADMIN_CHAT_ID, CHANNEL_ID, TZ)
     igsync.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
     drive.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
