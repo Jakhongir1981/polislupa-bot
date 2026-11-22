@@ -60,6 +60,15 @@ def _auth(request) -> bool:
     return KEY and request.headers.get("X-Key") == KEY
 
 
+def _uz_title(p) -> str:
+    for post in p.get("blog_posts") or []:
+        if post.get("lang") == "uz":
+            for line in post.get("md", "").splitlines()[1:15]:
+                if line.startswith("title:"):
+                    return line.split(":", 1)[1].strip().strip('"')
+    return ""
+
+
 async def _receive(request: web.Request) -> web.Response:
     if not _auth(request):
         return web.json_response({"error": "forbidden"}, status=403)
@@ -72,6 +81,21 @@ async def _receive(request: web.Request) -> web.Response:
     for i, b64 in enumerate(p.get("slides", [])):
         urls.append(igpublish.save_upload(f"{pid}_slide{i + 1}.png", base64.b64decode(b64)))
     cover_url = igpublish.save_upload(f"{pid}_cover.png", base64.b64decode(p["cover"])) if p.get("cover") else None
+    # тематическое фото с фирменной рамкой: обложка статьи и поста в Telegram + первый слайд Instagram
+    if p.get("photo_query"):
+        try:
+            import photos
+            raw_photo = await photos.find(p["photo_query"])
+            if raw_photo:
+                title = p.get("photo_title") or _uz_title(p) or p.get("blog_title") or p.get("topic", "")
+                blog = photos.to_jpeg(photos.compose(raw_photo, title, p.get("photo_chip", "")))
+                ig = photos.to_jpeg(photos.compose(raw_photo, title, p.get("photo_chip", ""), (1080, 1350)))
+                cover_url = igpublish.save_upload(f"{pid}_photo.jpg", blog)
+                urls.insert(0, igpublish.save_upload(f"{pid}_photo_ig.jpg", ig))
+                p["cover"] = base64.b64encode(blog).decode()
+                p["slides"] = [base64.b64encode(ig).decode()] + list(p.get("slides", []))
+        except Exception as e:
+            logging.warning("Тематическое фото: %s", e)
     data = {k: v for k, v in p.items() if k not in ("slides", "cover")}
     data.update(slide_urls=urls, cover_url=cover_url)
     with _cfg["db"]() as con:
