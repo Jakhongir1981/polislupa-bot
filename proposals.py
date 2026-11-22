@@ -40,7 +40,8 @@ def setup(db_func, bot: Bot, channel_id, admin_id: int, tz) -> None:
         ("GET", "/api/proposals/blog", _blog_queue),
         ("POST", "/api/proposals/blog_done", _blog_done),
         ("GET", "/api/blog/pending", _blog_pending),
-        ("POST", "/api/proposals/reel", _reel_again),  # без ключа: там только уже одобренные к публикации статьи
+        ("POST", "/api/proposals/reel", _reel_again),
+        ("GET", "/api/proposals/list", _list),  # без ключа: там только уже одобренные к публикации статьи
     ])
 
 
@@ -273,6 +274,20 @@ async def _blog_queue(request: web.Request) -> web.Response:
     for r in rows:
         d = json.loads(r["data"])
         out.append({"id": r["id"], "blog_posts": d.get("blog_posts", []), "cover_url": d.get("cover_url")})
+    return web.json_response({"items": out})
+
+
+async def _list(request: web.Request) -> web.Response:
+    """Последние предложения и их статусы (по ключу) — для проверки руководителем команды."""
+    if not _auth(request):
+        return web.json_response({"error": "forbidden"}, status=403)
+    with _cfg["db"]() as con:
+        rows = con.execute("SELECT * FROM proposals ORDER BY created_at DESC LIMIT 10").fetchall()
+    out = []
+    for r in rows:
+        d = json.loads(r["data"])
+        out.append({"id": r["id"], "tg": r["tg"], "ig": r["ig"], "blog": r["blog"], "topic": d.get("topic"),
+                    "blog_title": d.get("blog_title"), "blog_posts": [p.get("slug") for p in d.get("blog_posts") or []]})
     return web.json_response({"items": out})
 
 
