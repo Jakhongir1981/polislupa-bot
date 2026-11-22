@@ -41,8 +41,12 @@ async def publish_reel(video_url: str, description: str) -> str:
             raise RuntimeError(f"Facebook не принял видео: {up}")
         await _call(s, "POST", f"{PAGE_ID}/video_reels", upload_phase="finish", video_id=vid,
                     video_state="PUBLISHED", description=description[:2200])
-        for _ in range(60):  # ждём обработку
-            st = await _call(s, "GET", vid, fields="status")
+        for _ in range(60):  # ждём обработку; сразу после загрузки видео бывает «не найдено» — это нормально
+            try:
+                st = await _call(s, "GET", vid, fields="status")
+            except RuntimeError:
+                await asyncio.sleep(5)
+                continue
             phase = (st.get("status") or {}).get("video_status")
             if phase in ("ready", "published"):
                 break
