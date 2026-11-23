@@ -151,15 +151,12 @@ async def post_next_legacy(bot: Bot, preview_chat: int | None = None) -> None:
         caption = (caption[: 1024 - len(footer) - 3] + "…" if len(caption) + len(footer) > 1024 else caption) + footer
         kb = __import__("igpublish").funnel_kb(m["permalink"])
         try:
-            video = None
+            data = None
             if m.get("media_url"):
                 async with s.get(m["media_url"]) as r:
                     data = await r.read()
-                if len(data) <= TG_UPLOAD_LIMIT:
-                    video = BufferedInputFile(data, filename=f"{m['id']}.mp4")
-            if video:
-                msg = await bot.send_video(preview_chat or _cfg["channel"], video, caption=caption, reply_markup=kb,
-                                           supports_streaming=True)
+            if data and len(data) <= TG_UPLOAD_LIMIT:
+                msg = await _tg_video(bot, preview_chat or _cfg["channel"], data, m["id"], caption, kb)
             else:  # слишком большое или без файла — публикуем ссылку
                 msg = await bot.send_message(preview_chat or _cfg["channel"], caption + f"\n\n🎬 {m['permalink']}", reply_markup=kb)
         except Exception as e:
@@ -223,14 +220,25 @@ def _build(m: dict):
     return caption, kb
 
 
+async def _tg_video(bot, chat_id, data: bytes, mid: str, caption, kb):
+    """Видео в Telegram с правильными пропорциями: размеры, длительность и обложка передаются явно."""
+    import asyncio, os, tempfile, videofix
+    from aiogram.types import FSInputFile
+    src = os.path.join(tempfile.mkdtemp(), f"{mid}.mp4")
+    open(src, "wb").write(data)
+    v = await asyncio.to_thread(videofix.prepare, src)
+    return await bot.send_video(chat_id, FSInputFile(v["path"]), width=v["width"], height=v["height"],
+                                duration=v["duration"], thumbnail=FSInputFile(v["thumb"]) if v["thumb"] else None,
+                                supports_streaming=True, caption=caption, reply_markup=kb)
+
+
 async def _send_media(bot: Bot, session, chat_id, m: dict, caption: str, kb):
     data = None
     if m.get("media_url"):
         async with session.get(m["media_url"]) as r:
             data = await r.read()
     if data and len(data) <= TG_UPLOAD_LIMIT:
-        return await bot.send_video(chat_id, BufferedInputFile(data, filename=f"{m['id']}.mp4"),
-                                    caption=caption, reply_markup=kb, supports_streaming=True)
+        return await _tg_video(bot, chat_id, data, m["id"], caption, kb)
     return await bot.send_message(chat_id, caption + f"\n\n🎬 {m['permalink']}", reply_markup=kb)
 
 
@@ -312,3 +320,47 @@ async def cb_video(c: CallbackQuery) -> None:
         _qset(mid, status="rejected")
         await c.message.edit_text("❌ Это видео в канал не пойдёт. Завтра утром пришлю следующее.")
     await c.answer()
+
+
+async def api_recent(request):
+    """Последние перенесённые в канал видео (по ключу)."""
+    from aiohttp import web
+    if request.headers.get("X-Key") != os.environ.get("PROPOSAL_KEY", "-"):
+        return web.json_response({"error": "forbidden"}, status=403)
+    with _cfg["db"]() as con:
+        rows = con.execute("SELECT * FROM ig_posted ORDER BY posted_at DESC LIMIT 6").fetchall()
+    return web.json_response({"items": [dict(r) for r in rows]})
+
+
+async def api_repost(request):
+    """Перевыпустить видео (media_id) в правильном формате; delete_old=true — удалить старое сообщение."""
+    from aiohttp import web
+    if request.headers.get("X-Key") != os.environ.get("PROPOSAL_KEY", "-"):
+        return web.json_response({"error": "forbidden"}, status=403)
+    body = await request.json()
+    out = []
+    async with aiohttp.ClientSession() as s:
+        media = {m["id"]: m for m in await _all_media(s, _get_token())}
+        for mid in body.get("media_ids", []):
+            m = media.get(mid)
+            with _cfg["db"]() as con:
+                old = con.execute("SELECT message_id FROM ig_posted WHERE media_id=?", (mid,)).fetchone()
+            if not m:
+                out.append({"media_id": mid, "error": "нет в Instagram"})
+                continue
+            caption, kb = _build(m)
+            msg = await _send_media(_BOT["b"], s, _cfg["channel"], m, caption, kb)
+            with _cfg["db"]() as con:
+                con.execute("UPDATE ig_posted SET message_id=? WHERE media_id=?", (msg.message_id, mid))
+            deleted = False
+            if old and body.get("delete_old"):
+                try:
+                    deleted = await _BOT["b"].delete_message(_cfg["channel"], old["message_id"])
+                except Exception as e:
+                    logging.warning("Не удалил старое сообщение: %s", e)
+            out.append({"media_id": mid, "new": f"https://t.me/jakhongir_bakiev/{msg.message_id}",
+                        "old": old["message_id"] if old else None, "deleted": deleted})
+    return web.json_response({"done": out})
+
+
+_BOT = {}

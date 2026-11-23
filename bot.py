@@ -587,6 +587,8 @@ async def main() -> None:
     igsync.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
     drive.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
     drive._bot["b"] = bot
+    igsync._BOT["b"] = bot
+    igpublish.EXTRA_ROUTES.extend([("GET", "/api/ig/recent", igsync.api_recent), ("POST", "/api/ig/repost", igsync.api_repost)])
     igpublish.EXTRA_ROUTES.extend([("POST", "/api/drive/repost", drive._repost), ("GET", "/api/drive/items", drive._list_items)])
     proposals.setup(db, bot, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
     if os.environ.get("RESTORE_REJECTED") == "1":
