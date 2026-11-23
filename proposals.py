@@ -147,6 +147,22 @@ def _article_url(data):
     return f"{SITE}/blog/{p['slug']}/"
 
 
+async def _kick_site() -> None:
+    """Сразу запускает публикацию одобренных статей на сайте (GitHub Actions), не дожидаясь расписания."""
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        return
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20)) as s:
+            async with s.post("https://api.github.com/repos/Jakhongir1981/polislupa-site/actions/workflows/proposals.yml/dispatches",
+                              json={"ref": "main"}, headers={"Authorization": f"Bearer {token}",
+                                                             "Accept": "application/vnd.github+json"}) as r:
+                if r.status != 204:
+                    logging.warning("GitHub dispatch: %s %s", r.status, await r.text())
+    except Exception as e:
+        logging.warning("GitHub dispatch: %s", e)
+
+
 async def _is_live(url) -> bool:
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as s:
@@ -209,6 +225,7 @@ async def cb_prop(c: CallbackQuery) -> None:
     article = _article_url(data)
     if action in ("blog", "all") and article and row["blog"] == "new":
         _set(pid, blog="approved")
+        await _kick_site()
         if action == "all":
             waiting = []
             for ch, name in (("tg", "Telegram"), ("ig", "Instagram")):
@@ -216,11 +233,11 @@ async def cb_prop(c: CallbackQuery) -> None:
                     _set(pid, **{ch: "wait_blog"}); waiting.append(name)
             _set(pid, wait_since=datetime.now(_cfg["tz"]).replace(tzinfo=None).isoformat())
             await c.answer("Принято")
-            await bot.send_message(_cfg["admin"], f"📝 <b>{data.get('topic', '')}</b>: статья уходит на сайт (обычно до часа). "
+            await bot.send_message(_cfg["admin"], f"📝 <b>{data.get('topic', '')}</b>: статья уходит на сайт (1–3 минуты). "
                                                   f"{' и '.join(waiting)} выйдут сразу после неё — со ссылкой на статью.")
             return
         await c.answer("Принято")
-        await bot.send_message(_cfg["admin"], "📝 Статья уходит на сайт (обычно до часа), пришлю ссылку.")
+        await bot.send_message(_cfg["admin"], "📝 Статья уходит на сайт (1–3 минуты), пришлю ссылку.")
         return
     await c.answer("Принято, публикую…")
     await _publish(bot, pid, data, action, _get(pid))
@@ -281,6 +298,7 @@ async def tick(bot: Bot) -> None:
             continue
         if row["blog"] == "sched_blog":  # время пришло: сначала статья, посты ждут её
             upd = {"blog": "approved", "wait_since": now.isoformat()}
+            await _kick_site()
             upd.update({ch: "wait_blog" for ch in ("tg", "ig") if row[ch] == "scheduled"})
             _set(row["id"], **upd)
             continue
