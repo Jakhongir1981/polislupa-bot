@@ -586,6 +586,8 @@ async def main() -> None:
     publisher.setup(db, ADMIN_CHAT_ID, CHANNEL_ID, TZ)
     igsync.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
     drive.setup(db, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
+    drive._bot["b"] = bot
+    igpublish.EXTRA_ROUTES.extend([("POST", "/api/drive/repost", drive._repost), ("GET", "/api/drive/items", drive._list_items)])
     proposals.setup(db, bot, CHANNEL_ID, ADMIN_CHAT_ID, TZ)
     if os.environ.get("RESTORE_REJECTED") == "1":
         logging.info("Восстановлено отклонённых постов: %s", publisher.restore_rejected())

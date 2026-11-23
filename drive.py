@@ -109,7 +109,15 @@ async def check_inbox(bot: Bot) -> None:
             await bot.send_message(_cfg["admin"], f"📥 <b>Новый материал с Google Диска</b>\n«{f['name']}»")
             inp = BufferedInputFile(data, filename=f["name"])
             if kind == "video":
-                msg = await bot.send_video(_cfg["admin"], inp, caption=caption or None, reply_markup=_channel_kb())
+                import asyncio, tempfile, videofix
+                src = os.path.join(tempfile.mkdtemp(), "src_" + f["name"])
+                open(src, "wb").write(data)
+                v = await asyncio.to_thread(videofix.prepare, src)  # правильные пропорции для Telegram
+                from aiogram.types import FSInputFile
+                msg = await bot.send_video(_cfg["admin"], FSInputFile(v["path"]), width=v["width"], height=v["height"],
+                                           duration=v["duration"], supports_streaming=True,
+                                           thumbnail=FSInputFile(v["thumb"]) if v["thumb"] else None,
+                                           caption=caption or None, reply_markup=_channel_kb())
                 tg_file = msg.video.file_id
             else:
                 msg = await bot.send_photo(_cfg["admin"], inp, caption=caption or None, reply_markup=_channel_kb())
@@ -141,8 +149,12 @@ async def cb_drive(c: CallbackQuery) -> None:
         await c.answer("Уже обработано")
         return
     if action in ("ok", "okig"):
-        send = c.bot.send_video if row["kind"] == "video" else c.bot.send_photo
-        msg = await send(_cfg["channel"], row["tg_file"], caption=row["caption"] or None, reply_markup=_channel_kb())
+        if row["kind"] == "video":
+            msg = await c.bot.send_video(_cfg["channel"], row["tg_file"], caption=row["caption"] or None,
+                                         supports_streaming=True, reply_markup=_channel_kb())
+        else:
+            msg = await c.bot.send_photo(_cfg["channel"], row["tg_file"], caption=row["caption"] or None,
+                                         reply_markup=_channel_kb())
         _save(fid, status="published")
         try:
             await _get({"action": "done", "id": fid})
@@ -169,3 +181,38 @@ async def cb_drive(c: CallbackQuery) -> None:
         _save(fid, status="rejected")
         await c.message.edit_text("❌ Не публикуем. Файл остаётся на Диске, повторно предлагать не буду.")
     await c.answer()
+
+
+async def _repost(request):
+    """Перевыпустить сегодняшние видео с Диска в правильном формате (по ключу)."""
+    from aiohttp import web
+    if request.headers.get("X-Key") != os.environ.get("PROPOSAL_KEY", "-"):
+        return web.json_response({"error": "forbidden"}, status=403)
+    import igpublish, videofix
+    names = (await request.json()).get("names") or []
+    done = []
+    with _cfg["db"]() as con:
+        rows = con.execute("SELECT * FROM drive_items WHERE status='published' AND kind='video'").fetchall()
+    for row in rows:
+        if names and row["name"] not in names:
+            continue
+        local = os.path.join(igpublish.UP_DIR, f"{row['file_id']}_{row['name']}")
+        if not os.path.exists(local):
+            done.append(f"нет файла: {row['name']}")
+            continue
+        msg = await videofix.send(_bot["b"], _cfg["channel"], local, caption=row["caption"] or None,
+                                  reply_markup=_channel_kb())
+        done.append(f"{row['name']} → https://t.me/jakhongir_bakiev/{msg.message_id}")
+    return web.json_response({"done": done})
+
+
+async def _list_items(request):
+    from aiohttp import web
+    if request.headers.get("X-Key") != os.environ.get("PROPOSAL_KEY", "-"):
+        return web.json_response({"error": "forbidden"}, status=403)
+    with _cfg["db"]() as con:
+        rows = con.execute("SELECT file_id, name, status, kind FROM drive_items").fetchall()
+    return web.json_response({"items": [dict(r) for r in rows]})
+
+
+_bot = {}
