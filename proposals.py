@@ -42,7 +42,8 @@ def setup(db_func, bot: Bot, channel_id, admin_id: int, tz) -> None:
         ("POST", "/api/proposals/blog_done", _blog_done),
         ("GET", "/api/blog/pending", _blog_pending),
         ("POST", "/api/proposals/reel", _reel_again),
-        ("GET", "/api/proposals/list", _list),  # без ключа: там только уже одобренные к публикации статьи
+        ("GET", "/api/proposals/list", _list),
+        ("POST", "/api/stats", _stats),  # без ключа: там только уже одобренные к публикации статьи
     ])
 
 
@@ -315,6 +316,15 @@ async def _blog_queue(request: web.Request) -> web.Response:
         d = json.loads(r["data"])
         out.append({"id": r["id"], "blog_posts": d.get("blog_posts", []), "cover_url": d.get("cover_url")})
     return web.json_response({"items": out})
+
+
+async def _stats(request: web.Request) -> web.Response:
+    """Сводка посещаемости сайта от GitHub Actions → владельцу в бот. Отдельный ключ: только отправка сводки."""
+    if request.headers.get("X-Key") != os.environ.get("STATS_KEY", "-") or not os.environ.get("STATS_KEY"):
+        return web.json_response({"error": "forbidden"}, status=403)
+    text = (await request.json()).get("text", "")[:3800]
+    await _cfg["bot"].send_message(_cfg["admin"], text, disable_web_page_preview=True)
+    return web.json_response({"ok": True})
 
 
 async def _list(request: web.Request) -> web.Response:
