@@ -116,14 +116,13 @@ async def check_inbox(bot: Bot) -> None:
                 tg_file = msg.photo[-1].file_id
             import igpublish
             ig_url = igpublish.save_upload(f"{f['id']}_{f['name']}", data) if igpublish.enabled() else None
-            rows = []
+            # по умолчанию — только Telegram; Instagram/Facebook — отдельной кнопкой (видео часто уже из Instagram)
+            rows = [[InlineKeyboardButton(text="✅ Только Telegram-канал", callback_data=f"drv:ok:{f['id']}")]]
             if ig_url:
-                rows.append([InlineKeyboardButton(text="✅ Telegram + Instagram", callback_data=f"drv:okig:{f['id']}")])
-            rows.append([InlineKeyboardButton(text="✅ Только Telegram" if ig_url else "✅ Опубликовать",
-                                              callback_data=f"drv:ok:{f['id']}"),
-                         InlineKeyboardButton(text="❌ Не публиковать", callback_data=f"drv:no:{f['id']}")])
+                rows.append([InlineKeyboardButton(text="➕ Telegram + Instagram + Facebook", callback_data=f"drv:okig:{f['id']}")])
+            rows.append([InlineKeyboardButton(text="❌ Не публиковать", callback_data=f"drv:no:{f['id']}")])
             akb = InlineKeyboardMarkup(inline_keyboard=rows)
-            await bot.send_message(_cfg["admin"], "☝️ Публикуем в канал?" + ("" if caption else
+            await bot.send_message(_cfg["admin"], "☝️ Публикуем в канал?\nКнопки под видео («Сайт», «Заявка») — это ссылки для подписчиков, публикации на сайт нет." + ("" if caption else
                                    "\n(Подписи нет — можно добавить .txt с тем же именем файла на Диск.)"),
                                    reply_markup=akb)
             _save(f["id"], name=f["name"], status="pending", tg_file=tg_file, kind=kind, caption=caption, ig_url=ig_url)
