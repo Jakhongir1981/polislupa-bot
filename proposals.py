@@ -135,7 +135,7 @@ async def _send_to_owner(pid, data, raw) -> None:
 
 
 SITE = "https://polislupa.uz"
-WAIT_MIN = 45
+WAIT_MIN = 180  # GitHub запускает публикацию сайта с задержкой до часа — ждём статью, а не публикуем без неё
 
 
 def _article_url(data):
@@ -216,11 +216,11 @@ async def cb_prop(c: CallbackQuery) -> None:
                     _set(pid, **{ch: "wait_blog"}); waiting.append(name)
             _set(pid, wait_since=datetime.now(_cfg["tz"]).replace(tzinfo=None).isoformat())
             await c.answer("Принято")
-            await bot.send_message(_cfg["admin"], f"📝 <b>{data.get('topic', '')}</b>: статья уходит на сайт (5–15 мин). "
+            await bot.send_message(_cfg["admin"], f"📝 <b>{data.get('topic', '')}</b>: статья уходит на сайт (обычно до часа). "
                                                   f"{' и '.join(waiting)} выйдут сразу после неё — со ссылкой на статью.")
             return
         await c.answer("Принято")
-        await bot.send_message(_cfg["admin"], "📝 Статья уходит на сайт (5–15 мин), пришлю ссылку.")
+        await bot.send_message(_cfg["admin"], "📝 Статья уходит на сайт (обычно до часа), пришлю ссылку.")
         return
     await c.answer("Принято, публикую…")
     await _publish(bot, pid, data, action, _get(pid))
@@ -300,10 +300,16 @@ async def tick(bot: Bot) -> None:
         waiting = [ch for ch in ("tg", "ig") if row[ch] == "wait_blog"]
         if not waiting:
             continue
-        since = datetime.fromisoformat(row["wait_since"]) if row["wait_since"] else now
-        if live or (now - since).total_seconds() > WAIT_MIN * 60:
+        since = datetime.fromisoformat(row["wait_since"].rstrip("!")) if row["wait_since"] else now
+        if live:
             action = "all" if len(waiting) == 2 else waiting[0]
             await _publish(bot, row["id"], data, action, _get(row["id"]))
+        elif (now - since).total_seconds() > WAIT_MIN * 60 and not row["wait_since"].endswith("!"):
+            # без статьи посты не выпускаем — сообщаем владельцу и ждём дальше
+            _set(row["id"], wait_since=row["wait_since"] + "!")
+            await bot.send_message(_cfg["admin"], f"⏳ <b>{data.get('topic', '')}</b>: статья ещё не появилась на сайте "
+                                                  f"за {WAIT_MIN // 60} ч. Посты в Telegram, Instagram и Facebook ждут её — "
+                                                  "выйдут сразу после статьи. Я проверю, что с сайтом.")
 
 
 async def _blog_queue(request: web.Request) -> web.Response:
