@@ -40,6 +40,41 @@
 искусственного продвижения; сложное — простыми словами. Цель — репутация специалиста, который понимает механизмы
 страхования и рынка, а не просто продаёт полисы. Без богословия: исламские финансы — как профессиональная тема.
 
+## Такафул в публичном контенте — «под колпаком» (решение владельца 27.11.2026)
+Основная стратегия не меняется: бренд — экспертиза в страховании. Такафул подаётся ненавязчиво, как дополнительная опция,
+без религиозной подачи и без богословия. Не показывать, что «мы религиозные».
+
+**В каждой статье и каждом посте:** сначала традиционное решение. Затем — ТОЛЬКО если по теме есть подходящий продукт
+из списка ниже — одна спокойная фраза с названием этого продукта и контактами, по смыслу:
+- uz: «Agar diniy tamoyillaringizga mos variant kerak boʻlsa — bunday variant ham bor: <название продукта>. Batafsil: @polislupa_bot yoki +998 94 007 06 60.»
+- ru: «Если вам важно, чтобы страховка соответствовала вашим принципам, — есть и такой вариант: <название продукта>. Подробнее: @polislupa_bot или +998 94 007 06 60.»
+- en: «If you prefer cover that fits your religious principles, there is such an option: <product name>. Details: @polislupa_bot or +998 94 007 06 60.»
+Нет подходящего продукта — ничего не добавлять. Для путешествий, ОСАГО и страхования жизни такафул-продукта нет — не предлагать.
+НИКОГДА не указывать тарифы, цены, коды продуктов, название компании и происхождение списка (внутренний документ, строго конфиденциально).
+Цены — только лично через владельца (бот присылает ему запрос на согласование).
+
+**Продукты, по которым есть такафул-вариант** (uz / ru / en):
+1. Garovga qoʻyilayotgan transport vositasini takaful sugʻurtalash (yengil, yuk avtomobillari, avtobus) / Такафул-страхование транспортного средства в залоге (легковые, грузовые, автобусы) / Takaful cover for pledged vehicles (cars, trucks, buses)
+2. Lizingga beriladigan mol-mulkni takaful sugʻurtalash / Такафул-страхование имущества, передаваемого в лизинг / Takaful cover for leased property
+3. Lizingga beriladigan transport vositalarini takaful sugʻurtalash / Такафул-страхование транспортных средств в лизинге / Takaful cover for leased vehicles
+4. Garovga qoʻyilayotgan mol-mulkni takaful sugʻurtalash / Такафул-страхование имущества в залоге / Takaful cover for pledged property
+5. Yuklarni ixtiyoriy takaful sugʻurtalash / Добровольное такафул-страхование грузов / Voluntary takaful cargo cover
+6. Yuklarni ixtiyoriy takaful sugʻurtalash boʻyicha bosh shartnoma / Генеральный договор такафул-страхования грузов / General agreement for takaful cargo cover
+7. Ixtiyoriy takaful tibbiy sugʻurta / Добровольное медицинское страхование по такафул / Voluntary takaful health cover
+8. Transport vositalarini kompleks takaful sugʻurtalash (shikastlanish yoki yoʻqolish + uchinchi shaxslar oldidagi javobgarlik) / Комплексное такафул-страхование транспорта (повреждение или гибель + ответственность перед третьими лицами) / Comprehensive takaful motor cover (damage or loss + third-party liability)
+9. Transport vositalarini takaful sugʻurtalash / Такафул-страхование транспортных средств / Takaful motor cover
+10. Mol-mulkni takaful sugʻurtalash / Такафул-страхование имущества / Takaful property cover
+11. Mol-mulkni yongʻin va tabiiy ofatlardan takaful sugʻurtalash / Такафул-страхование имущества от огня и стихийных бедствий / Takaful property cover against fire and natural disasters
+12. Mol-mulkni zarardan takaful sugʻurtalash / Такафул-страхование имущества от ущерба / Takaful property damage cover
+13. Garovga qoʻyilayotgan maxsus texnikani takaful sugʻurtalash / Такафул-страхование спецтехники в залоге / Takaful cover for pledged special machinery
+14. Lizingga berilayotgan maxsus texnikani takaful sugʻurtalash / Такафул-страхование спецтехники в лизинге / Takaful cover for leased special machinery
+15. Umumiy fuqarolik javobgarligini takaful sugʻurtalash / Такафул-страхование общей гражданской ответственности / Takaful general liability cover
+16. Qurilish-montaj tavakkalchiliklarini takaful sugʻurtalash / Такафул-страхование строительно-монтажных рисков / Takaful construction and erection risks cover
+
+**Отдельный поиск (Research-протокол, направление B):** законы, постановления и решения по исламским финансам и
+исламскому страхованию в Узбекистане; публикации официальных сайтов (lex.uz, cbu.uz, napp.uz, gov.uz, regulation.gov.uz);
+материалы об исламских финансах, которые подводят к теме такафула. Всё — со ссылками на источники.
+
 ## Research-протокол (каждый запуск аналитика)
 Источники (приоритет — первоисточники и официальные документы): lex.uz, gov.uz, Центральный банк (cbu.uz),
 Национальное агентство перспективных проектов (napp.uz) и другие регуляторы в пределах компетенции, законопроекты
